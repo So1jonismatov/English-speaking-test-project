@@ -83,7 +83,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
       const [success, response] = await signup(userData);
 
       if (success) {
-        navigate("/"); // Redirect to home after successful signup
+        navigate("/"); 
       } else {
         setError(response.message || "An error occurred during signup");
       }

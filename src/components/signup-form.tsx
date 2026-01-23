@@ -27,16 +27,13 @@ import { DatePicker } from "./ui/date-picker"
 
 type Region = { id: number; name: string }
 type District = { id: number; name: string; region_id: number }
-type Quarter = { id: number; name: string; district_id: number }
 
 export function SignupForm(props: React.ComponentProps<typeof Card>) {
   const [regions, setRegions] = useState<Region[]>([])
   const [districts, setDistricts] = useState<District[]>([])
-  const [quarters, setQuarters] = useState<Quarter[]>([])
 
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null)
-  const [selectedQuarter, setSelectedQuarter] = useState<Quarter | null>(null)
 
   useEffect(() => {
     fetch("/src/assets/regions.json")
@@ -44,16 +41,11 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
       .then((data) => {
         setRegions(data.regions)
         setDistricts(data.districts)
-        setQuarters(data.quarters)
       })
   }, [])
 
   const filteredDistricts = selectedRegion
     ? districts.filter((d) => d.region_id === selectedRegion.id)
-    : []
-
-  const filteredQuarters = selectedDistrict
-    ? quarters.filter((q) => q.district_id === selectedDistrict.id)
     : []
 
   return (
@@ -106,13 +98,12 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
               </FieldDescription>
             </Field>
 
-            <Field>
+            <Field >
               <FieldLabel>Region</FieldLabel>
               <Select
                 onValueChange={(value) => {
                   setSelectedRegion(regions.find(r => r.id === Number(value)) ?? null)
                   setSelectedDistrict(null)
-                  setSelectedQuarter(null)
                 }}
               >
                 <SelectTrigger>
@@ -130,12 +121,11 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
               </Select>
             </Field>
 
-            <Field>
+            <Field >
               <FieldLabel>District</FieldLabel>
               <Select
                 onValueChange={(value) => {
                   setSelectedDistrict(districts.find(d => d.id === Number(value)) ?? null)
-                  setSelectedQuarter(null)
                 }}
                 disabled={!selectedRegion}
               >
@@ -148,29 +138,6 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                   {filteredDistricts.map((d) => (
                     <SelectItem key={d.id} value={d.id.toString()}>
                       {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field className="md:col-span-2">
-              <FieldLabel>Quarter</FieldLabel>
-              <Select
-                onValueChange={(value) =>
-                  setSelectedQuarter(quarters.find(q => q.id === Number(value)) ?? null)
-                }
-                disabled={!selectedDistrict}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a quarter">
-                    {selectedQuarter?.name}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredQuarters.map((q) => (
-                    <SelectItem key={q.id} value={q.id.toString()}>
-                      {q.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

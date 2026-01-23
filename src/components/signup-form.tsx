@@ -38,6 +38,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
   const [email, setEmail] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [dateOfBirth, setDateOfBirth] = useState<string>("");
   const [region, setRegion] = useState<string>("");
   const [district, setDistrict] = useState<string>("");
@@ -68,6 +69,13 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
     setError("");
     setIsLoading(true);
 
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const userData = {
         name,
@@ -83,7 +91,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
       const [success, response] = await signup(userData);
 
       if (success) {
-        navigate("/"); 
+        navigate("/");
       } else {
         setError(response.message || "An error occurred during signup");
       }
@@ -179,6 +187,17 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
               <FieldDescription>
                 Must be at least 8 characters long.
               </FieldDescription>
+            </Field>
+
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+              <Input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </Field>
 
             <Field>

@@ -1,28 +1,39 @@
 import { Outlet, Link, useNavigate } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "./contexts/AuthContext";
 
 export function App() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Change to true to see home page
+  const { user, loading, logout } = useAuth();
 
   useEffect(() => {
-    // Redirect to login if not logged in and trying to access the home page
-    if (!isLoggedIn && window.location.pathname === '/') {
+    if (!loading && !user && window.location.pathname === '/') {
       navigate('/login');
     }
-  }, [isLoggedIn, navigate]);
+  }, [user, loading, navigate]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="">
       <nav style={{ padding: "1rem", background: "#f0f0f0" }}>
         <Link to="/" style={{ margin: "0 10px" }}>Home</Link>
-        <Link to="/login" style={{ margin: "0 10px" }}>Login</Link>
-        <Link to="/signup" style={{ margin: "0 10px" }}>Sign Up</Link>
-        {isLoggedIn && <Link to="/user" style={{ margin: "0 10px" }}>User Profile</Link>}
-        {isLoggedIn && <Link to="/detail/123" style={{ margin: "0 10px" }}>Exam Detail (ID: 123)</Link>}
-        <button onClick={() => setIsLoggedIn(!isLoggedIn)} style={{ marginLeft: "20px" }}>
-          {isLoggedIn ? "Log Out" : "Log In (for testing)"}
-        </button>
+        {!user && <Link to="/login" style={{ margin: "0 10px" }}>Login</Link>}
+        {!user && <Link to="/signup" style={{ margin: "0 10px" }}>Sign Up</Link>}
+        {user && <Link to="/user" style={{ margin: "0 10px" }}>User Profile</Link>}
+        {user && <Link to="/detail/123" style={{ margin: "0 10px" }}>Exam Detail (ID: 123)</Link>}
+        {user && (
+          <button onClick={handleLogout} style={{ marginLeft: "20px" }}>
+            Log Out
+          </button>
+        )}
       </nav>
       <div>
         <Outlet />

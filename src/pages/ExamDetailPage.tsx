@@ -1,13 +1,13 @@
-import React from 'react';
+import { useParams } from "react-router";
 
-const ExamDetailPage: React.FC = () => {
+export default function ExamDetailPage() {
+  const { examId } = useParams<{ examId: string }>();
+
   return (
-    <div>
-      <h1>Exam Detail</h1>
-      <p>This is a placeholder for the specific exam details (status, score, AI feedback).</p>
-      {/* TODO: Implement exam details */}
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">Exam Details</h1>
+      <p>Exam ID: {examId}</p>
+      <p>This is a sample exam detail page.</p>
     </div>
   );
-};
-
-export default ExamDetailPage;
+}

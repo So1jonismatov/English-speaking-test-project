@@ -8,9 +8,11 @@ import SignUpPage from '@/pages/SignupPage.tsx'
 import HomePage from "@/pages/HomePage.tsx";
 import UserProfilePage from "@/pages/UserProfilePage.tsx";
 import ExamDetailPage from "@/pages/ExamDetailPage.tsx";
+import { AuthProvider } from "./contexts/AuthContext";
 
 
 createRoot(document.getElementById("root")!).render(
+  <AuthProvider>
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<App />}>
@@ -18,8 +20,9 @@ createRoot(document.getElementById("root")!).render(
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignUpPage />} />
         <Route path="user" element={<UserProfilePage />} />
-        <Route path="detail/:examId" element={<ExamDetailPage />} /> 
+        <Route path="detail/:examId" element={<ExamDetailPage />} />
       </Route>
     </Routes>
   </BrowserRouter>
+  </AuthProvider>
 )

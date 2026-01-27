@@ -1,0 +1,91 @@
+# Tasks for IELTS Speaking Checking Web App
+
+## Current Status
+- Authentication system (login/signup) is implemented
+- Basic routing is set up
+- Auth context is working
+- Navbar-menu component exists but not integrated properly
+
+## Tasks to Implement
+
+### 1. Layout & Navigation
+- [x] Integrate navbar-menu.tsx as top navbar on all pages
+- [x] Add user avatar and name to navbar (left side)
+- [x] Make user avatar/name link to /user route
+- [x] Update routing to use navbar-menu layout
+
+### 2. User Profile Page Enhancement
+- [x] Enhance UserProfilePage to allow editing user information
+- [x] Create mock API function to update user data
+- [x] Implement form with all user fields (name, surname, email, phone, region, city)
+- [x] Add save button to update user profile
+
+### 3. Home Page Implementation
+- [x] Create new home page with welcome message: "Welcome {name}"
+- [x] Add "Start Test" button that navigates to /test
+- [x] Create mock API function to fetch IELTS questions
+- [x] Return 3-part IELTS questions from mock API
+
+### 4. Test Page Implementation
+- [x] Create /test page with 3 horizontal cards (vertical on mobile)
+- [x] Each card contains questions for each part of IELTS test
+- [x] Each card has a start icon (Play icon from lucide icons)
+- [x] Cards navigate to /test/:id when start icon is clicked
+
+### 5. Individual Test Pages
+- [x] Create dynamic route /test/:id for individual test parts
+- [x] Implement 3-column layout (25%, 50%, 25%) for desktop
+- [x] Implement mobile layout (single column with scrollable cards)
+- [x] Left card: Questions for current part
+- [x] Middle card: Large recording area with voice visualizer
+- [x] Right card: Notes area
+- [x] Top of middle card: Timer (2 minutes for part 1)
+- [x] Record button using react-voice-visualizer
+- [x] Timer starts when recording starts
+- [x] After recording: Record button turns to send icon + restart button
+- [x] Ability to listen to recordings
+- [x] After sending: Next/Previous buttons appear instead of record
+- [x] Next button becomes "Finish" on part 3
+
+### 6. State Management
+- [x] Install and set up zustand for state management
+- [x] Create store for test state (current part, recordings, notes, etc.)
+- [x] Manage timer state in zustand
+- [x] Store user responses and recordings
+- [x] Create store for user profile management
+
+### 7. Dependencies Installed
+- [x] zustand (state management)
+- [x] react-voice-visualizer (audio recording and visualization)
+
+### 8. Responsive Design
+- [x] Ensure desktop layout works (3 columns)
+- [x] Ensure mobile layout works (scrollable cards)
+- [x] Proper responsive behavior for all components
+
+### 9. Testing
+- [x] Test all navigation flows
+- [x] Test state management
+- [x] Test audio recording functionality
+- [x] Test timer functionality
+- [x] Test mobile responsiveness
+
+## Completed Tasks
+- [x] Authentication system (login/signup)
+- [x] Basic routing setup
+- [x] Auth context implementation
+- [x] Basic user profile page
+- [x] Basic home page
+- [x] Lucide icons installed
+- [x] Navbar-menu component exists
+- [x] Avatar component created and implemented
+- [x] Full IELTS speaking test flow implemented
+- [x] Audio recording with react-voice-visualizer
+- [x] Timer functionality for test parts
+- [x] State management with zustand
+- [x] Responsive design for desktop and mobile
+- [x] Complete navigation between all pages
+- [x] Floating navbar with squircle shape for large screens
+- [x] Normal navbar for mobile screens
+- [x] AuroraBackground added to home and main test pages
+- [x] Fixed all TypeScript compilation errors

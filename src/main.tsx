@@ -8,6 +8,9 @@ import SignUpPage from '@/pages/SignupPage.tsx'
 import HomePage from "@/pages/HomePage.tsx";
 import UserProfilePage from "@/pages/UserProfilePage.tsx";
 import ExamDetailPage from "@/pages/ExamDetailPage.tsx";
+import TestPage from "@/pages/TestPage.tsx";
+import IndividualTestPage from "@/pages/IndividualTestPage.tsx";
+import ResultsPage from "@/pages/ResultsPage.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 
 
@@ -21,6 +24,9 @@ createRoot(document.getElementById("root")!).render(
         <Route path="signup" element={<SignUpPage />} />
         <Route path="user" element={<UserProfilePage />} />
         <Route path="detail/:examId" element={<ExamDetailPage />} />
+        <Route path="test" element={<TestPage />} />
+        <Route path="test/:id" element={<IndividualTestPage />} />
+        <Route path="results" element={<ResultsPage />} />
       </Route>
     </Routes>
   </BrowserRouter>

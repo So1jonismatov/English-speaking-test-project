@@ -22,7 +22,7 @@ interface JwtPayload {
 }
 
 // Mock user database
-let users: User[] = [
+const users: User[] = [
   {
     id: 1,
     email: 'test@email.com',

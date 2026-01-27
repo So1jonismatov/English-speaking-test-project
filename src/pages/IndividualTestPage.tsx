@@ -151,7 +151,8 @@ export default function IndividualTestPage() {
     if (partId < 3) {
       navigate(`/test/${partId + 1}`);
     } else {
-      navigate("/results");
+      // Navigate directly to home page instead of results page
+      navigate("/");
     }
   };
 
@@ -210,7 +211,7 @@ export default function IndividualTestPage() {
 
     // Reset the test after submission
     resetTest();
-    navigate("/results");
+    navigate("/");
   };
 
   const goToNextQuestion = async () => {

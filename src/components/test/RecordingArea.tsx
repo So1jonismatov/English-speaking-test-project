@@ -1,5 +1,5 @@
 // RecordingArea.tsx
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,10 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result.split(',')[1]); // Extract base64 part
+      if (typeof reader.result === "string") {
+        resolve(reader.result.split(",")[1]); // Extract base64 part
       } else {
-        reject(new Error('Could not convert blob to base64'));
+        reject(new Error("Could not convert blob to base64"));
       }
     };
     reader.onerror = reject;
@@ -34,7 +34,7 @@ export function RecordingArea({
   const { timer, setTimer, getTimeLimitForQuestion, setQuestionRecording } =
     useTestStore();
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialTimeRef = useRef(getTimeLimitForQuestion(partId));
   const timerStateRef = useRef(timer);
 
@@ -43,27 +43,14 @@ export function RecordingArea({
     timerStateRef.current = timer;
   }, [timer]);
 
-  const recorderControls = useVoiceVisualizer({
+  // Attempt to configure MediaRecorder with WAV format using undocumented options
+  const recorderControls = (useVoiceVisualizer as any)({
     onStartRecording: () => {
       // Timer starts automatically via effect watching isRecordingInProgress
     },
-    onStopRecording: async (blob) => {
-      // Auto-save when recording stops
-      if (blob) {
-        try {
-          const base64Recording = await blobToBase64(blob);
-          const timeSpent = initialTimeRef.current - timerStateRef.current;
-          setQuestionRecording(partId, currentQuestionIndex, {
-            recording: base64Recording,
-            timeSpent: timeSpent > 0 ? timeSpent : initialTimeRef.current,
-          });
-        } catch (error) {
-          console.error("Error converting blob to base64:", error);
-        }
-      }
-    },
-    onError: (err) => {
-      console.error("Recording error:", err);
+    onStopRecording: () => {
+      // The actual blob processing is handled in the useEffect hook below
+      // that watches for changes to recordedBlob
     },
     // Request WAV format if browser supports it, fallback to default
     mediaRecorderOptions: {
@@ -75,7 +62,6 @@ export function RecordingArea({
 
   const {
     stopRecording,
-    startRecording,
     isRecordingInProgress,
     clearCanvas,
     recordedBlob,
@@ -100,7 +86,7 @@ export function RecordingArea({
 
     if (isRecordingInProgress) {
       timerRef.current = setInterval(() => {
-        setTimer(prevTimer => {
+        setTimer((prevTimer: number) => {
           const newTimer = prevTimer - 1;
           timerStateRef.current = newTimer; // Update ref with new timer value
           if (newTimer <= 0) {
@@ -120,20 +106,20 @@ export function RecordingArea({
         clearInterval(timerRef.current);
       }
     };
-  }, [isRecordingInProgress, stopRecording]); // Only depend on isRecordingInProgress to prevent infinite loop
+  }, [isRecordingInProgress, stopRecording, setTimer]); // Only depend on isRecordingInProgress to prevent infinite loop
 
   // Handle auto-save when blob is ready (backup to onStopRecording)
   useEffect(() => {
     if (recordedBlob && !isRecordingInProgress) {
       const timeSpent = initialTimeRef.current - timerStateRef.current;
       blobToBase64(recordedBlob)
-        .then(base64Recording => {
+        .then((base64Recording) => {
           setQuestionRecording(partId, currentQuestionIndex, {
             recording: base64Recording,
             timeSpent: timeSpent > 0 ? timeSpent : initialTimeRef.current,
           });
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("Error converting blob to base64:", error);
         });
     }

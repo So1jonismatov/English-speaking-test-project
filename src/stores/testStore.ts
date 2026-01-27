@@ -15,7 +15,7 @@ interface TestState {
   setCurrentQuestionIndex: (index: number) => void;
 
   timer: number;
-  setTimer: (time: number) => void;
+  setTimer: (time: number | ((prevTime: number) => number)) => void;
   resetTimer: () => void;
 
   // Recording state for each question

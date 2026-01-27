@@ -1,15 +1,26 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface QuestionRecording {
+  recording: string; // Store as base64 string for localStorage compatibility
+  timeSpent: number; // Time spent on this question in seconds
+}
 
 interface TestState {
   currentPart: number;
   setCurrentPart: (part: number) => void;
 
+  // Current question in the part
+  currentQuestionIndex: number;
+  setCurrentQuestionIndex: (index: number) => void;
+
   timer: number;
   setTimer: (time: number) => void;
   resetTimer: () => void;
 
-  recordings: Record<number, Blob | null>;
-  setRecording: (partId: number, recording: Blob | null) => void;
+  // Recording state for each question
+  questionRecordings: Record<number, Record<number, QuestionRecording | null>>; // partId -> questionIndex -> recording
+  setQuestionRecording: (partId: number, questionIndex: number, recording: QuestionRecording | null) => void;
 
   notes: Record<number, string>;
   setNotes: (partId: number, notes: string) => void;
@@ -25,66 +36,118 @@ interface TestState {
   fetchQuestions: () => Promise<void>;
 
   resetTest: () => void;
+
+  // Get time limit for a specific question based on part
+  getTimeLimitForQuestion: (partId: number) => number;
+
+  // Check if all questions in a part have been recorded
+  isPartComplete: (partId: number) => boolean;
 }
 
-const useTestStore = create<TestState>((set) => ({
-  currentPart: 1,
-  setCurrentPart: (part) => set({ currentPart: part }),
-  
-  timer: 120,
-  setTimer: (time) => set({ timer: time }),
-  resetTimer: () => set({ timer: 120 }),
+const useTestStore = create<TestState>()(
+  persist(
+    (set, get) => ({
+      currentPart: 1,
+      setCurrentPart: (part) => set({ currentPart: part }),
 
-  recordings: {},
-  setRecording: (partId, recording) => set((state) => ({
-    recordings: { ...state.recordings, [partId]: recording }
-  })),
-  
-  notes: { 1: '', 2: '', 3: '' },
-  setNotes: (partId, notes) => set((state) => ({
-    notes: { ...state.notes, [partId]: notes }
-  })),
-  
-  isRecording: false,
-  setIsRecording: (recording) => set({ isRecording: recording }),
-  
-  questions: {
-    part1: [],
-    part2: [],
-    part3: []
-  },
-  
-  fetchQuestions: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500)); 
-    
-    set({
+      currentQuestionIndex: 0,
+      setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
+
+      timer: 30, // 30 seconds for part 1, first question
+      setTimer: (time) =>
+        set((state) => ({
+          timer: typeof time === "function" ? time(state.timer) : time,
+        })),
+      resetTimer: () => set({ timer: 30 }),
+
+      questionRecordings: {},
+      setQuestionRecording: (partId, questionIndex, recording) => set((state) => ({
+        questionRecordings: {
+          ...state.questionRecordings,
+          [partId]: {
+            ...(state.questionRecordings[partId] || {}),
+            [questionIndex]: recording
+          }
+        }
+      })),
+
+      notes: { 1: '', 2: '', 3: '' },
+      setNotes: (partId, notes) => set((state) => ({
+        notes: { ...state.notes, [partId]: notes }
+      })),
+
+      isRecording: false,
+      setIsRecording: (recording) => set({ isRecording: recording }),
+
       questions: {
-        part1: [
-          "What is your name?",
-          "Where are you from?",
-          "Do you work or study?",
-          "What do you like to do in your free time?"
-        ],
-        part2: [
-          "Describe a book that you have recently read.",
-          "You should say: what the book was about, why you chose to read it, and how you felt about it."
-        ],
-        part3: [
-          "How important is reading in your culture?",
-          "Do you think digital books will replace physical books?",
-          "What are the benefits of reading to children?"
-        ]
+        part1: [],
+        part2: [],
+        part3: []
+      },
+
+      fetchQuestions: async () => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        set({
+          questions: {
+            part1: [
+              "What is your name?",
+              "Where are you from?",
+              "Do you work or study?",
+              "What do you like to do in your free time?"
+            ],
+            part2: [
+              "Describe a book that you have recently read.",
+              "You should say: what the book was about, why you chose to read it, and how you felt about it."
+            ],
+            part3: [
+              "How important is reading in your culture?",
+              "Do you think digital books will replace physical books?",
+              "What are the benefits of reading to children?"
+            ]
+          }
+        });
+      },
+
+      resetTest: () => set({
+        currentPart: 1,
+        currentQuestionIndex: 0,
+        timer: 30,
+        questionRecordings: {},
+        notes: { 1: '', 2: '', 3: '' },
+        isRecording: false
+      }),
+
+      getTimeLimitForQuestion: (partId: number) => {
+        if (partId === 1) return 30; // 30 seconds for each question in part 1
+        if (partId === 2) return 120; // 2 minutes for each question in part 2
+        if (partId === 3) return 40; // 40 seconds for each question in part 3
+        return 30; // default fallback
+      },
+
+      isPartComplete: (partId: number) => {
+        const state = get();
+        const currentQuestions =
+          partId === 1 ? state.questions.part1 :
+          partId === 2 ? state.questions.part2 :
+          state.questions.part3;
+
+        // Check if all questions in this part have recordings
+        for (let i = 0; i < currentQuestions.length; i++) {
+          const recording = state.questionRecordings[partId]?.[i];
+          if (!recording || !recording.recording) {
+            return false;
+          }
+        }
+        return true;
       }
-    });
-  },
-  
-  resetTest: () => set({
-    currentPart: 1,
-    timer: 120,
-    recordings: {},
-    notes: { 1: '', 2: '', 3: '' },
-    isRecording: false
-  })
-}));
+    }),
+    {
+      name: 'ielts-test-storage', // name of the item in the storage (must be unique)
+      storage: createJSONStorage(() => localStorage), // Use localStorage
+      // No custom serializer needed if recording is already a base64 string
+    }
+  )
+);
 
 export default useTestStore;

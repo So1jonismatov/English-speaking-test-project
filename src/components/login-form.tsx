@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Link } from "react-router";
 import maabLogo from "@/assets/maab_logo.png";
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import useAuthStore from "@/stores/authStore";
 import { useNavigate } from "react-router";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -28,7 +28,7 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const login = useAuthStore(state => state.login);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {

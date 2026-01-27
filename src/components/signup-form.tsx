@@ -23,7 +23,7 @@ import {
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import maabLogo from "@/assets/maab_logo.png"
-import { useAuth } from "@/contexts/AuthContext";
+import useAuthStore from "@/stores/authStore";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Region = { id: number; name: string }
@@ -48,7 +48,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null)
 
-  const { signup } = useAuth();
+  const signup = useAuthStore(state => state.signup);
   const navigate = useNavigate();
 
   useEffect(() => {

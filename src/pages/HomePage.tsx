@@ -1,11 +1,11 @@
-import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 import useTestStore from "@/stores/testStore";
 import { AuroraBackground } from "@/components/ui/aurora-background";
+import useAuthStore from "../stores/authStore";
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const fetchQuestions = useTestStore((state) => state.fetchQuestions);
 

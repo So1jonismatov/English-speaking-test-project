@@ -89,3 +89,16 @@
 - [x] Normal navbar for mobile screens
 - [x] AuroraBackground added to home and main test pages
 - [x] Fixed all TypeScript compilation errors
+- [x] Fixed profile editing issue (no auto-save on change)
+- [x] Implemented individual question recording for each part
+- [x] Set specific timers for each part (30s for part 1, 2min for part 2, 40s for part 3)
+- [x] Fixed timer functionality to work properly
+- [x] Implemented automatic saving of voice recordings per question
+- [x] Added visual indicators for recorded questions
+- [x] Added fake send request when finishing the test
+- [x] Recordings are saved as Blobs in the zustand store
+- [x] Recordings are typically in WebM format (audio/webm) by default
+- [x] Prepared implementation for sending recordings to backend
+- [x] Added recording metadata (type, size, time spent) to submission
+- [x] Included information about MP3 conversion options (backend recommended)
+- [x] Added notes about client-side conversion possibilities with additional libraries

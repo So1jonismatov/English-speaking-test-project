@@ -7,6 +7,8 @@ import useTestStore from "@/stores/testStore";
 import { QuestionsList } from "@/components/test/QuestionsList";
 import { RecordingArea } from "@/components/test/RecordingArea";
 import { NotesPanel } from "@/components/test/NotesPanel";
+import { fakeApiService } from "@/services/fakeApiService";
+import { AssessmentLoading } from "@/components/test/AssessmentLoading";
 
 // Utility to convert base64 to Blob
 function base64ToBlob(base64: string, mimeType: string = 'audio/webm'): Blob {
@@ -28,71 +30,7 @@ function base64ToBlob(base64: string, mimeType: string = 'audio/webm'): Blob {
   return new Blob(byteArrays, { type: mimeType });
 }
 
-// Utility to convert WebM to WAV (since most browsers record WebM/Opus)
-async function convertBlobToWav(blob: Blob): Promise<Blob> {
-  try {
-    // If it's already WAV, return as-is
-    if (blob.type.includes("wav")) return blob;
 
-    const audioContext = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
-    const arrayBuffer = await blob.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-    // Create WAV file from AudioBuffer
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const sampleRate = audioBuffer.sampleRate;
-    const length = audioBuffer.length * numberOfChannels * 2;
-    const buffer = new ArrayBuffer(44 + length);
-    const view = new DataView(buffer);
-
-    // WAV Header
-    const writeString = (view: DataView, offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-
-    writeString(view, 0, "RIFF");
-    view.setUint32(4, 36 + length, true);
-    writeString(view, 8, "WAVE");
-    writeString(view, 12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numberOfChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-    view.setUint16(32, numberOfChannels * 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, "data");
-    view.setUint32(40, length, true);
-
-    // Write audio data
-    const channels = [];
-    for (let i = 0; i < numberOfChannels; i++) {
-      channels.push(audioBuffer.getChannelData(i));
-    }
-
-    let offset = 44;
-    for (let i = 0; i < audioBuffer.length; i++) {
-      for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sample = Math.max(-1, Math.min(1, channels[channel][i]));
-        view.setInt16(
-          offset,
-          sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-          true,
-        );
-        offset += 2;
-      }
-    }
-
-    return new Blob([buffer], { type: "audio/wav" });
-  } catch (err) {
-    console.error("Conversion failed, returning original blob:", err);
-    return blob;
-  }
-}
 
 export default function IndividualTestPage() {
   const { id } = useParams<{ id: string }>();
@@ -110,6 +48,9 @@ export default function IndividualTestPage() {
     isPartComplete,
     resetTest,
     isRecording,
+    assessmentStatus,
+    setAssessmentStatus,
+    setTestCompleted,
   } = useTestStore();
 
   const currentQuestions =
@@ -121,6 +62,15 @@ export default function IndividualTestPage() {
 
   // Initialize timer when part or question changes
   useEffect(() => {
+    // If assessment is pending, don't reset anything yet
+    if (assessmentStatus === 'pending') return;
+
+    // Reset question index to 0 when part changes
+    if (partId !== useTestStore.getState().currentPart) {
+      setCurrentQuestionIndex(0);
+      useTestStore.getState().setCurrentPart(partId);
+    }
+
     const initialTime = getTimeLimitForQuestion(partId);
     setTimer(initialTime);
     setIsRecording(false);
@@ -130,6 +80,8 @@ export default function IndividualTestPage() {
     getTimeLimitForQuestion,
     setTimer,
     setIsRecording,
+    assessmentStatus,
+    setCurrentQuestionIndex
   ]);
 
   const changeQuestion = useCallback(
@@ -147,91 +99,57 @@ export default function IndividualTestPage() {
     ],
   );
 
-  const goToNextPart = () => {
+  const goToNextPart = async () => {
     if (partId < 3) {
-      navigate(`/test/${partId + 1}`);
+      if (partId === 2) {
+        // Trigger assessment before Part 3
+        setAssessmentStatus('pending');
+        await fakeApiService.assessPart2();
+        setAssessmentStatus('completed');
+        navigate(`/test/${partId + 1}`);
+      } else {
+        navigate(`/test/${partId + 1}`);
+      }
     } else {
-      // Navigate directly to home page instead of results page
       navigate("/");
     }
   };
 
   const submitTestResults = async () => {
+    // Mark test as completed and navigate home (which is now results page)
     setIsRecording(false);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    const allRecordings = useTestStore.getState().questionRecordings;
-    const recordingsToDownload: Array<{ blob: Blob; name: string }> = [];
-
-    // Collect all recordings
-    for (const pId in allRecordings) {
-      for (const qIndex in allRecordings[pId]) {
-        const recordingData = allRecordings[pId][qIndex];
-        if (recordingData?.recording) {
-          // Convert base64 back to blob for downloading
-          const blob = base64ToBlob(recordingData.recording, 'audio/webm');
-          recordingsToDownload.push({
-            blob: blob,
-            name: `Part${pId}_Question${parseInt(qIndex) + 1}`,
-          });
-        }
-      }
-    }
-
-    if (recordingsToDownload.length === 0) {
-      alert("No recordings found to download");
-      navigate("/results");
-      return;
-    }
-
-    // Download all as WAV files
-    for (const { blob, name } of recordingsToDownload) {
-      try {
-        const wavBlob = await convertBlobToWav(blob);
-        const url = URL.createObjectURL(wavBlob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = `${name}.wav`;
-        document.body.appendChild(a);
-        a.click();
-
-        // Cleanup
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        }, 100);
-
-        // Small delay between downloads to prevent browser throttling
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      } catch (err) {
-        console.error(`Failed to download ${name}:`, err);
-      }
-    }
-
-    // Reset the test after submission
-    resetTest();
+    setTestCompleted(true);
     navigate("/");
   };
 
   const goToNextQuestion = async () => {
+    // 1. Validate Recording
+    const currentRecording = questionRecordings[partId]?.[currentQuestionIndex];
+    if (!currentRecording || !currentRecording.recording) {
+      alert("Please record an answer for the current question before proceeding.");
+      return;
+    }
+
+    // 2. Submit Audio to Fake API (Download)
+    try {
+      const blob = base64ToBlob(currentRecording.recording, 'audio/webm');
+      const filename = `Part${partId}_Question${currentQuestionIndex + 1}`;
+      await fakeApiService.submitAudio(blob, filename); // This triggers download
+    } catch (error) {
+      console.error("Failed to submit audio:", error);
+      // Continue anyway? Use alert?
+    }
+
+    // 3. Navigate
     if (currentQuestionIndex < currentQuestions.length - 1) {
-      // Check if current question has been recorded before allowing to move to next
-      const currentRecording = questionRecordings[partId]?.[currentQuestionIndex];
-      if (!currentRecording || !currentRecording.recording) {
-        alert("Please record an answer for the current question before proceeding.");
-        return;
-      }
       changeQuestion(currentQuestionIndex + 1);
     } else if (partId < 3) {
-      // Check if all questions in this part have been recorded before allowing to proceed
       if (!isPartComplete(partId)) {
         alert(`Please record answers for all questions in Part ${partId} before proceeding.`);
         return;
       }
-      goToNextPart();
+      await goToNextPart();
     } else {
-      // For the last part, check if all questions have been recorded
       if (!isPartComplete(partId)) {
         alert(`Please record answers for all questions in Part ${partId} before finishing.`);
         return;
@@ -251,42 +169,59 @@ export default function IndividualTestPage() {
   const isLastQuestion =
     currentQuestionIndex === currentQuestions.length - 1 && partId === 3;
 
-  // Check if current question has been recorded
-  const currentRecording = questionRecordings[partId]?.[currentQuestionIndex];
-  const isCurrentQuestionRecorded = !!(currentRecording && currentRecording.recording);
+  const isCurrentQuestionRecorded = !!(questionRecordings[partId]?.[currentQuestionIndex]?.recording);
+  const isNextButtonDisabled = isRecording || (!isCurrentQuestionRecorded && !isLastQuestion && assessmentStatus !== 'pending');
 
-  const isNextButtonDisabled = isRecording || (!isCurrentQuestionRecorded && !isLastQuestion) || (isLastQuestion && !isPartComplete(partId));
+  if (assessmentStatus === 'pending') {
+    return <AssessmentLoading />;
+  }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        IELTS Speaking Test - Part {partId}
-      </h1>
+    <div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <QuestionsList
-          partId={partId}
-          currentQuestions={currentQuestions}
-          currentQuestionIndex={currentQuestionIndex}
-          onSelectQuestion={changeQuestion}
-        />
+      <div className="p-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-in-out h-full flex flex-col min-h-0">
+        <h1 className="text-3xl font-bold mb-6 text-center shrink-0">
+          IELTS Speaking Test - Part {partId}
+        </h1>
 
-        {/* Key forces remount for fresh visualizer per question */}
-        <RecordingArea
-          key={`${partId}-${currentQuestionIndex}`}
-          partId={partId}
-          currentQuestion={currentQuestions[currentQuestionIndex]}
-          currentQuestionIndex={currentQuestionIndex}
-        />
+        <div className="flex-1 min-h-0 w-full overflow-hidden">
+          <div className="flex flex-col lg:flex-row gap-6 h-full">
 
-        <NotesPanel partId={partId} />
+            {/* Left Column: Questions List (25%) */}
+            <div className="hidden lg:block w-1/4 h-full overflow-hidden">
+              <QuestionsList
+                partId={partId}
+                currentQuestions={currentQuestions}
+                currentQuestionIndex={currentQuestionIndex}
+                onSelectQuestion={changeQuestion}
+              />
+            </div>
+
+            {/* Middle Column: Recording Area (50%) */}
+            <div className="flex-1 lg:w-2/4 h-full min-h-0">
+              <RecordingArea
+                key={`${partId}-${currentQuestionIndex}`}
+                partId={partId}
+                currentQuestion={currentQuestions[currentQuestionIndex]}
+                currentQuestionIndex={currentQuestionIndex}
+              />
+            </div>
+
+            {/* Right Column: Notes Panel (25%) */}
+            <div className="hidden lg:block w-1/4 h-full overflow-hidden">
+              <NotesPanel partId={partId} />
+            </div>
+
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8 flex justify-between">
+      <div className="mt-8 flex justify-center gap-8 shrink-0">
         <Button
           onClick={goToPreviousQuestion}
           disabled={currentQuestionIndex === 0 && partId === 1}
           variant="outline"
+          className="min-w-[140px] shadow-sm hover:bg-gray-50"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Previous
@@ -295,11 +230,11 @@ export default function IndividualTestPage() {
         <Button
           onClick={goToNextQuestion}
           disabled={isNextButtonDisabled}
-          className={isLastQuestion ? "bg-green-600 hover:bg-green-700" : ""}
+          className={`min-w-[180px] shadow-md transition-all hover:scale-105 ${isLastQuestion ? "bg-green-600 hover:bg-green-700 shadow-green-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"}`}
         >
           {isLastQuestion ? (
             <>
-              Finish & Download All <Download className="ml-2 h-4 w-4" />
+              Finish Test <Download className="ml-2 h-4 w-4" />
             </>
           ) : (
             <>

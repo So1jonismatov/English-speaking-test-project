@@ -11,19 +11,17 @@ export function App() {
     // Initialize auth state on app load
     useAuthStore.getState().initializeAuth();
 
-    if (!loading && !isAuthenticated && window.location.pathname === "/") {
+    if (!loading && !isAuthenticated && window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
       navigate("/login");
     }
   }, [isAuthenticated, loading, navigate]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-sans text-foreground">
       <Navbar />
-      <div className="w-screen h-screen">
+      <div className="w-full pt-16">
         <Outlet />
       </div>
     </div>

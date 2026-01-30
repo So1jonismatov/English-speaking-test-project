@@ -42,6 +42,12 @@ interface TestState {
 
   // Check if all questions in a part have been recorded
   isPartComplete: (partId: number) => boolean;
+
+  assessmentStatus: 'idle' | 'pending' | 'completed';
+  setAssessmentStatus: (status: 'idle' | 'pending' | 'completed') => void;
+
+  testCompleted: boolean;
+  setTestCompleted: (completed: boolean) => void;
 }
 
 const useTestStore = create<TestState>()(
@@ -79,6 +85,12 @@ const useTestStore = create<TestState>()(
       isRecording: false,
       setIsRecording: (recording) => set({ isRecording: recording }),
 
+      assessmentStatus: 'idle',
+      setAssessmentStatus: (status) => set({ assessmentStatus: status }),
+
+      testCompleted: false,
+      setTestCompleted: (completed) => set({ testCompleted: completed }),
+
       questions: {
         part1: [],
         part2: [],
@@ -97,8 +109,7 @@ const useTestStore = create<TestState>()(
               "What do you like to do in your free time?"
             ],
             part2: [
-              "Describe a book that you have recently read.",
-              "You should say: what the book was about, why you chose to read it, and how you felt about it."
+              "Describe a book that you have recently read. You should say: what the book was about, why you chose to read it, and how you felt about it."
             ],
             part3: [
               "How important is reading in your culture?",
@@ -115,7 +126,9 @@ const useTestStore = create<TestState>()(
         timer: 30,
         questionRecordings: {},
         notes: { 1: '', 2: '', 3: '' },
-        isRecording: false
+        isRecording: false,
+        assessmentStatus: 'idle',
+        testCompleted: false
       }),
 
       getTimeLimitForQuestion: (partId: number) => {
@@ -129,8 +142,8 @@ const useTestStore = create<TestState>()(
         const state = get();
         const currentQuestions =
           partId === 1 ? state.questions.part1 :
-          partId === 2 ? state.questions.part2 :
-          state.questions.part3;
+            partId === 2 ? state.questions.part2 :
+              state.questions.part3;
 
         // Check if all questions in this part have recordings
         for (let i = 0; i < currentQuestions.length; i++) {

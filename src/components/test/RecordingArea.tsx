@@ -1,8 +1,9 @@
 // RecordingArea.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { NotesPanel } from "./NotesPanel";
 
 interface RecordingAreaProps {
   partId: number;
@@ -10,13 +11,12 @@ interface RecordingAreaProps {
   currentQuestionIndex: number;
 }
 
-// Helper function to convert Blob to base64 string
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       if (typeof reader.result === "string") {
-        resolve(reader.result.split(",")[1]); // Extract base64 part
+        resolve(reader.result.split(",")[1]);
       } else {
         reject(new Error("Could not convert blob to base64"));
       }
@@ -31,156 +31,176 @@ export function RecordingArea({
   currentQuestion,
   currentQuestionIndex,
 }: RecordingAreaProps) {
-  const { timer, setTimer, getTimeLimitForQuestion, setQuestionRecording } =
-    useTestStore();
+  const { timer, setTimer, getTimeLimitForQuestion, setQuestionRecording } = useTestStore();
+  const sessionInfoRef = useRef({ partId, currentQuestionIndex });
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialTimeRef = useRef(getTimeLimitForQuestion(partId));
-  const timerStateRef = useRef(timer);
-
-  // Update the ref when timer changes
-  useEffect(() => {
-    timerStateRef.current = timer;
-  }, [timer]);
-
-  // Attempt to configure MediaRecorder with WAV format using undocumented options
-  const recorderControls = (useVoiceVisualizer as any)({
+  const visualizerOptions = useMemo(() => ({
     onStartRecording: () => {
-      // Timer starts automatically via effect watching isRecordingInProgress
+      sessionInfoRef.current = { partId, currentQuestionIndex };
     },
-    onStopRecording: () => {
-      // The actual blob processing is handled in the useEffect hook below
-      // that watches for changes to recordedBlob
-    },
-    // Request WAV format if browser supports it, fallback to default
     mediaRecorderOptions: {
-      mimeType: MediaRecorder.isTypeSupported("audio/wav")
-        ? "audio/wav"
-        : "audio/webm",
+      mimeType: MediaRecorder.isTypeSupported("audio/wav") ? "audio/wav" : "audio/webm",
     },
-  });
+  }), [partId, currentQuestionIndex]);
+
+  const recorderControls = useVoiceVisualizer(visualizerOptions);
 
   const {
     stopRecording,
+    startRecording,
     isRecordingInProgress,
     clearCanvas,
     recordedBlob,
     error,
   } = recorderControls;
 
-  // Reset timer when question changes
   useEffect(() => {
     const initial = getTimeLimitForQuestion(partId);
-    initialTimeRef.current = initial;
     setTimer(initial);
-    timerStateRef.current = initial;
     clearCanvas();
+    if (timerRef.current) clearInterval(timerRef.current);
   }, [partId, currentQuestionIndex]);
 
-  // Timer logic - syncs with actual recording state from visualizer
   useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
     if (isRecordingInProgress) {
       timerRef.current = setInterval(() => {
-        setTimer((prevTimer: number) => {
-          const newTimer = prevTimer - 1;
-          timerStateRef.current = newTimer; // Update ref with new timer value
-          if (newTimer <= 0) {
-            // Use a timeout to allow state update to complete before stopping
-            setTimeout(() => {
-              stopRecording();
-            }, 0);
+        setTimer((prev) => {
+          if (prev <= 1) {
+            stopRecording();
             return 0;
           }
-          return newTimer;
+          return prev - 1;
         });
       }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRecordingInProgress, stopRecording, setTimer]); // Only depend on isRecordingInProgress to prevent infinite loop
+  }, [isRecordingInProgress, stopRecording, setTimer]);
 
-  // Handle auto-save when blob is ready (backup to onStopRecording)
   useEffect(() => {
     if (recordedBlob && !isRecordingInProgress) {
-      const timeSpent = initialTimeRef.current - timerStateRef.current;
+      const { partId: savedPartId, currentQuestionIndex: savedIndex } = sessionInfoRef.current;
+      const initialTime = getTimeLimitForQuestion(savedPartId);
+      const timeSpent = initialTime - timer;
+
       blobToBase64(recordedBlob)
         .then((base64Recording) => {
-          setQuestionRecording(partId, currentQuestionIndex, {
+          setQuestionRecording(savedPartId, savedIndex, {
             recording: base64Recording,
-            timeSpent: timeSpent > 0 ? timeSpent : initialTimeRef.current,
+            timeSpent: timeSpent > 0 ? timeSpent : initialTime,
           });
         })
-        .catch((error) => {
-          console.error("Error converting blob to base64:", error);
-        });
+        .catch((err) => console.error("Save error:", err));
     }
-  }, [
-    recordedBlob,
-    isRecordingInProgress,
-    partId,
-    currentQuestionIndex,
-    setQuestionRecording,
-  ]);
+  }, [recordedBlob, isRecordingInProgress, timer, getTimeLimitForQuestion, setQuestionRecording]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const timerClass = useMemo(() => {
+    return `text-xl font-mono px-3 py-1 rounded transition-colors ${timer < 10 ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-200 text-gray-700"
+      }`;
+  }, [timer]);
+
+  const handleToggleRecording = useCallback(() => {
+    if (isRecordingInProgress) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }, [isRecordingInProgress, startRecording, stopRecording]);
+
   return (
-    <Card className="lg:col-span-2">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Recording - Question {currentQuestionIndex + 1}</CardTitle>
-        <div
-          className={`text-2xl font-mono px-4 py-2 rounded ${
-            timer < 10 ? "bg-red-100 text-red-700" : "bg-gray-200"
-          }`}
-        >
-          {formatTime(timer)}
+    <Card className={`h-full flex flex-col overflow-hidden transition-all duration-300 border-0 ${isRecordingInProgress ? 'ring-1 ring-red-300 shadow-xl shadow-red-100' : 'shadow-md'
+      }`}>
+
+
+      <CardContent className="p-0 flex-1 flex flex-col relative overflow-hidden min-h-0">
+        {/* Desktop Question Display */}
+        <div className="hidden lg:block mb-4 p-4 bg-blue-50/50 border border-blue-100 rounded-lg mx-6 mt-6 shrink-0">
+          <p className="font-semibold text-xs text-blue-600 uppercase mb-1">Current Question:</p>
+          <p className="text-lg text-slate-800">{currentQuestion}</p>
+          <div className={timerClass}>{formatTime(timer)}</div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg min-h-[6rem]">
-          <p className="font-medium text-sm text-gray-600 mb-1">
-            Current Question:
-          </p>
-          <p className="text-lg">{currentQuestion}</p>
+
+        {/* Mobile Header */}
+        <div className="lg:hidden p-4 bg-white border-b z-10 shrink-0">
+          <div className="flex justify-between items-start mb-2">
+            <p className="font-bold text-xs text-gray-400 uppercase">Question {currentQuestionIndex + 1}</p>
+          </div>
+          <p className="text-lg font-medium leading-tight">{currentQuestion}</p>
+          <div className={timerClass}>{formatTime(timer)}</div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-            Error accessing microphone. Please check permissions.
+          <div className="m-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm mx-6 border border-red-100">
+            Microphone error. Please check browser permissions.
           </div>
         )}
 
-        <div className="flex flex-col items-center">
-          <VoiceVisualizer
-            controls={recorderControls}
-            isControlPanelShown={true}
-            height={150}
-            width="100%"
-            mainBarColor="#3b82f6"
-            secondaryBarColor="#93c5fd"
-            barWidth={2}
-            gap={1.5}
-            speed={2}
-          />
-
-          {!isRecordingInProgress && recordedBlob && (
-            <div className="mt-4 p-2 bg-green-50 text-green-700 rounded text-sm">
-              ✓ Recording saved automatically
+        <div className="flex-1 flex lg:block overflow-x-auto lg:overflow-visible snap-x snap-mandatory no-scrollbar">
+          {/* Slide 1: Visualizer */}
+          <div className="w-full flex-shrink-0 snap-center flex flex-col items-center justify-center p-4 min-w-full lg:min-w-0">
+            <div className="w-full max-w-md">
+              <VoiceVisualizer
+                controls={recorderControls}
+                isControlPanelShown={false}
+                height={180}
+                width="100%"
+                mainBarColor="#3b82f6"
+                secondaryBarColor="#93c5fd"
+                barWidth={3}
+                gap={2}
+              />
+              {!isRecordingInProgress && recordedBlob && (
+                <div className="mt-4 p-2 bg-green-50 text-green-700 rounded-full text-xs font-medium text-center border border-green-100">
+                  ● Recording synced
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Slide 2: Notes (Mobile Only) */}
+          <div className="w-full flex-shrink-0 snap-center p-4 min-w-full lg:hidden overflow-y-auto">
+            <div className="h-full bg-amber-50 rounded-xl p-4 border border-amber-100">
+              <h3 className="font-bold text-sm uppercase text-amber-800 mb-2">Scratchpad</h3>
+              <NotesPanel partId={partId} embedded={true} />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Indicators */}
+        <div className="flex justify-center gap-1.5 mb-4 lg:hidden">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
+        </div>
+
+        {/* Bottom Controls Area */}
+        <div className="p-6 bg-gray-50 border-t flex justify-center items-center lg:bg-transparent lg:border-none lg:pt-0">
+          <button
+            onClick={handleToggleRecording}
+            aria-label={isRecordingInProgress ? "Stop Recording" : "Start Recording"}
+            className={`
+              w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-105 active:scale-95
+              ${isRecordingInProgress
+                ? "bg-red-500 ring-4 ring-red-100"
+                : "bg-blue-600 ring-4 ring-blue-100"}
+            `}
+          >
+            {isRecordingInProgress ? (
+              <div className="w-5 h-5 bg-white rounded-sm" />
+            ) : (
+              <div className="w-0 h-0 border-t-10 border-t-transparent border-l-16 border-l-white border-b-10 border-b-transparent ml-1" />
+            )}
+          </button>
         </div>
       </CardContent>
     </Card>

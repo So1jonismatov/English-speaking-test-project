@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router";
 import { useEffect } from "react";
 import useAuthStore from "./stores/authStore";
 import { Navbar } from "@/components/Navbar";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 export function App() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export function App() {
       <div className="w-full">
         <Outlet />
       </div>
+      <SpeedInsights />
     </div>
   );
 }

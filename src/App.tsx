@@ -19,9 +19,9 @@ export function App() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="bg-background font-sans text-foreground">
       <Navbar />
-      <div className="w-full pt-16">
+      <div className="w-full">
         <Outlet />
       </div>
     </div>

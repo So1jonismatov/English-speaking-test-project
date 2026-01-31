@@ -46,7 +46,7 @@ export default function IndividualTestPage() {
     setTimer,
     setIsRecording,
     isPartComplete,
-    resetTest,
+
     isRecording,
     assessmentStatus,
     setAssessmentStatus,
@@ -177,9 +177,8 @@ export default function IndividualTestPage() {
   }
 
   return (
-    <div>
-
-      <div className="p-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-in-out h-full flex flex-col min-h-0">
+    <div className="h-screen w-screen bg-blue-50 flex items-center justify-center">
+      <div className="w-full p-5 h-full max-w-[1200px] max-h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-in-out flex flex-col min-h-0">
         <h1 className="text-3xl font-bold mb-6 text-center shrink-0">
           IELTS Speaking Test - Part {partId}
         </h1>
@@ -214,35 +213,36 @@ export default function IndividualTestPage() {
 
           </div>
         </div>
+        <div className="mt-8 flex justify-center gap-8 shrink-0">
+          <Button
+            onClick={goToPreviousQuestion}
+            disabled={currentQuestionIndex === 0 && partId === 1}
+            variant="outline"
+            className="min-w-[140px] shadow-sm hover:bg-gray-50"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Previous
+          </Button>
+
+          <Button
+            onClick={goToNextQuestion}
+            disabled={isNextButtonDisabled}
+            className={`min-w-[180px] shadow-md transition-all hover:scale-105 ${isLastQuestion ? "bg-green-600 hover:bg-green-700 shadow-green-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"}`}
+          >
+            {isLastQuestion ? (
+              <>
+                Finish Test <Download className="ml-2 h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Next Question <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <div className="mt-8 flex justify-center gap-8 shrink-0">
-        <Button
-          onClick={goToPreviousQuestion}
-          disabled={currentQuestionIndex === 0 && partId === 1}
-          variant="outline"
-          className="min-w-[140px] shadow-sm hover:bg-gray-50"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
 
-        <Button
-          onClick={goToNextQuestion}
-          disabled={isNextButtonDisabled}
-          className={`min-w-[180px] shadow-md transition-all hover:scale-105 ${isLastQuestion ? "bg-green-600 hover:bg-green-700 shadow-green-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"}`}
-        >
-          {isLastQuestion ? (
-            <>
-              Finish Test <Download className="ml-2 h-4 w-4" />
-            </>
-          ) : (
-            <>
-              Next Question <ArrowRight className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 }

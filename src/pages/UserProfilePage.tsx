@@ -97,7 +97,7 @@ export default function UserProfilePage() {
 
   return (
     <AuroraBackground>
-      <div className="z-10 w-full h-full flex justify-center items-center">
+      <div className="z-10 w-full h-full flex justify-center items-center pt-20">
         <div className="p-8 max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">User Profile</h1>
 

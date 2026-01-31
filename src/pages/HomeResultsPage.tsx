@@ -26,42 +26,47 @@ export default function HomeResultsPage() {
     if (!testCompleted) {
         // Start Test View (Aurora Background from original TestPage)
         return (
-            <AuroraBackground>
-                <div className="p-6 max-w-xl mx-auto relative z-20 flex flex-col items-center justify-center min-h-[50vh] text-center">
-                    <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-violet-600">
-                        IELTS Speaking Test
-                    </h1>
-                    <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto">
-                        Experience a realistic IELTS Speaking simulation with instant AI feedback.
-                    </p>
+            <div className="h-screen w-screen overflow-y-auto relative">
+                <AuroraBackground className="absolute inset-0 z-0">
+                    <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none">
+                        {/* Content Container - Pointer events auto for interactivity */}
+                        <div className="p-6 max-w-xl mx-auto flex flex-col items-center justify-center text-center pointer-events-auto">
+                            <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-violet-600">
+                                IELTS Speaking Test
+                            </h1>
+                            <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto">
+                                Experience a realistic IELTS Speaking simulation with instant AI feedback.
+                            </p>
 
-                    <div className="space-y-4 w-full max-w-xs">
-                        <Link to="/test/1" className="w-full block">
-                            <Button
-                                size="lg"
-                                className="w-full h-14 text-lg font-semibold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:scale-105"
-                                onClick={() => {
-                                    document.documentElement.requestFullscreen().catch((err) => {
-                                        console.log("Fullscreen request failed", err);
-                                    });
-                                }}
-                            >
-                                Start Full Mock Test <Play className="ml-2 h-5 w-5 fill-current" />
-                            </Button>
-                        </Link>
+                            <div className="space-y-4 w-full max-w-xs">
+                                <Link to="/test/1" className="w-full block">
+                                    <Button
+                                        size="lg"
+                                        className="w-full h-14 text-lg font-semibold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:scale-105"
+                                        onClick={() => {
+                                            document.documentElement.requestFullscreen().catch((err) => {
+                                                console.log("Fullscreen request failed", err);
+                                            });
+                                        }}
+                                    >
+                                        Start Full Mock Test <Play className="ml-2 h-5 w-5 fill-current" />
+                                    </Button>
+                                </Link>
 
-                        <p className="text-xs text-red-500 font-medium bg-red-50 py-2 px-3 rounded-md border border-red-100">
-                            Warning: Once started, you cannot undo or go back.
-                        </p>
+                                <p className="text-xs text-red-500 font-medium bg-red-50 py-2 px-3 rounded-md border border-red-100">
+                                    Warning: Once started, you cannot undo or go back.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </AuroraBackground>
+                </AuroraBackground>
+            </div>
         );
     }
 
     // Results Grid View
     return (
-        <div className="min-h-screen bg-gray-50 p-6 flex flex-col relative h-screen overflow-hidden">
+        <div className="h-screen w-screen bg-gray-50 flex flex-col relative overflow-hidden">
             <Button
                 onClick={() => {
                     if (document.fullscreenElement) {
@@ -76,11 +81,11 @@ export default function HomeResultsPage() {
                 <RotateCcw className="h-4 w-4" /> Reset Test
             </Button>
 
-            <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 grid-rows-[3fr_2fr] gap-4 h-full pt-16">
+            <div className="flex-1 max-w-7xl mx-auto w-full flex flex-col md:grid md:grid-cols-4 md:grid-rows-[3fr_2fr] gap-4 h-full pt-20 pb-6 px-6">
 
                 {/* Top Row: Overall Score - Spans all 4 columns */}
                 <motion.div
-                    className="md:col-span-4 bg-white rounded-2xl shadow-sm border p-8 flex flex-col items-center justify-center relative overflow-hidden"
+                    className="flex-[2] md:col-span-4 bg-white rounded-2xl shadow-sm border p-4 md:p-8 flex flex-col items-center justify-center relative overflow-hidden shrink-0 min-h-0"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
@@ -90,9 +95,9 @@ export default function HomeResultsPage() {
                         {null}
                     </AuroraBackground>
                     <div className="relative z-10 text-center">
-                        <h2 className="text-2xl font-medium text-gray-500 mb-2">Overall Band Score</h2>
-                        <div className="text-8xl font-bold text-gray-900 tracking-tighter">7.5</div>
-                        <p className="text-gray-400 mt-2">Good User (C1)</p>
+                        <h2 className="text-sm md:text-2xl font-medium text-gray-500 mb-1 md:mb-2">Overall Band Score</h2>
+                        <div className="text-6xl md:text-8xl font-bold text-gray-900 tracking-tighter">7.5</div>
+                        <p className="text-xs md:text-base text-gray-400 mt-1 md:mt-2">Good User (C1)</p>
                     </div>
                 </motion.div>
 
@@ -102,17 +107,17 @@ export default function HomeResultsPage() {
                         key={metric.id}
                         layoutId={metric.id}
                         onClick={() => setSelectedId(metric.id)}
-                        className={`cursor-pointer rounded-2xl p-6 flex flex-col justify-between shadow-sm border bg-white hover:shadow-md transition-shadow relative overflow-hidden group`}
+                        className={`flex-1 cursor-pointer rounded-xl md:rounded-2xl p-4 md:p-6 flex flex-row md:flex-col items-center md:items-start justify-between shadow-sm border bg-white hover:shadow-md transition-shadow relative overflow-hidden group min-h-0`}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
-                        <div className={`absolute top-0 left-0 w-1 h-full ${metric.color}`} />
-                        <div>
-                            <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wide mb-1">{metric.title}</h3>
-                            <div className="text-4xl font-bold text-gray-800">{metric.score}</div>
+                        <div className={`absolute top-0 left-0 bottom-0 md:bottom-auto w-1 md:w-1 md:h-full ${metric.color}`} />
+                        <div className="flex-1 ml-3 md:ml-0">
+                            <h3 className="text-gray-500 font-medium text-xs md:text-sm uppercase tracking-wide mb-0 md:mb-1">{metric.title}</h3>
+                            <div className="text-2xl md:text-4xl font-bold text-gray-800">{metric.score}</div>
                         </div>
-                        <div className="mt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Maximize2 className="h-5 w-5 text-gray-400" />
+                        <div className="md:mt-4 flex justify-end opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Maximize2 className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                         </div>
                     </motion.div>
                 ))}

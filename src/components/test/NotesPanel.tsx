@@ -22,7 +22,7 @@ export function NotesPanel({ partId, embedded = false }: NotesPanelProps) {
   }
 
   return (
-    <Card className="h-full flex flex-col bg-white border-0 shadow-md">
+    <Card className="h-full flex flex-col  border bg-gray-50 border-blue-300 shadow-md">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-medium text-gray-700">Notes</CardTitle>
       </CardHeader>
@@ -32,7 +32,7 @@ export function NotesPanel({ partId, embedded = false }: NotesPanelProps) {
             value={notes[partId] || ""}
             onChange={(e) => setNotes(partId, e.target.value)}
             placeholder="Type your notes here..."
-            className="w-full h-full resize-none border-gray-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-gray-50/50 text-base rounded-md p-4 leading-relaxed"
+            className="w-full h-full resize-none border-gray-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-white  text-base rounded-md p-4 leading-relaxed"
           />
         </div>
       </CardContent>

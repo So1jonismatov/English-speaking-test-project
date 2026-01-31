@@ -2,7 +2,7 @@
 import { useEffect, useRef, useMemo, useCallback } from "react";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import useTestStore from "@/stores/testStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { NotesPanel } from "./NotesPanel";
 
 interface RecordingAreaProps {
@@ -106,7 +106,7 @@ export function RecordingArea({
   };
 
   const timerClass = useMemo(() => {
-    return `text-xl font-mono px-3 py-1 rounded transition-colors ${timer < 10 ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-200 text-gray-700"
+    return `text-xl font-mono px-3 py-1 rounded transition-colors ${timer < 10 ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-50 text-gray-800"
       }`;
   }, [timer]);
 
@@ -119,15 +119,14 @@ export function RecordingArea({
   }, [isRecordingInProgress, startRecording, stopRecording]);
 
   return (
-    <Card className={`h-full flex flex-col overflow-hidden transition-all duration-300 border-0 ${isRecordingInProgress ? 'ring-1 ring-red-300 shadow-xl shadow-red-100' : 'shadow-md'
+    <Card className={`h-full flex flex-col overflow-hidden transition-all duration-300 border ${isRecordingInProgress ? 'border-red-300 shadow-xl shadow-red-100' : 'shadow-md border-blue-300'
       }`}>
 
 
-      <CardContent className="p-0 flex-1 flex flex-col relative overflow-hidden min-h-0">
+      <CardContent className="p-0 flex-1 flex flex-col justify-between relative overflow-y-auto min-h-0">
         {/* Desktop Question Display */}
-        <div className="hidden lg:block mb-4 p-4 bg-blue-50/50 border border-blue-100 rounded-lg mx-6 mt-6 shrink-0">
-          <p className="font-semibold text-xs text-blue-600 uppercase mb-1">Current Question:</p>
-          <p className="text-lg text-slate-800">{currentQuestion}</p>
+        <div className="hidden lg:block mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg mx-6 shrink-0">
+          <p className="font-semibold text-xs text-blue-900 uppercase mb-1">Current Question: <em className="text-lg text-slate-800">{currentQuestion}</em></p>
           <div className={timerClass}>{formatTime(timer)}</div>
         </div>
 
@@ -146,10 +145,10 @@ export function RecordingArea({
           </div>
         )}
 
-        <div className="flex-1 flex lg:block overflow-x-auto lg:overflow-visible snap-x snap-mandatory no-scrollbar">
+        <div className="flex-1 flex   lg:block overflow-x-auto lg:overflow-visible snap-x snap-mandatory no-scrollbar">
           {/* Slide 1: Visualizer */}
-          <div className="w-full flex-shrink-0 snap-center flex flex-col items-center justify-center p-4 min-w-full lg:min-w-0">
-            <div className="w-full max-w-md">
+          <div className="w-full shrink-0 snap-center flex flex-col items-center justify-center p-4 min-w-full lg:min-w-0">
+            <div className="w-full max-w-md ">
               <VoiceVisualizer
                 controls={recorderControls}
                 isControlPanelShown={false}
@@ -160,16 +159,11 @@ export function RecordingArea({
                 barWidth={3}
                 gap={2}
               />
-              {!isRecordingInProgress && recordedBlob && (
-                <div className="mt-4 p-2 bg-green-50 text-green-700 rounded-full text-xs font-medium text-center border border-green-100">
-                  ● Recording synced
-                </div>
-              )}
             </div>
           </div>
 
           {/* Slide 2: Notes (Mobile Only) */}
-          <div className="w-full flex-shrink-0 snap-center p-4 min-w-full lg:hidden overflow-y-auto">
+          <div className="w-full shrink-0 snap-center p-4 min-w-full lg:hidden overflow-y-auto">
             <div className="h-full bg-amber-50 rounded-xl p-4 border border-amber-100">
               <h3 className="font-bold text-sm uppercase text-amber-800 mb-2">Scratchpad</h3>
               <NotesPanel partId={partId} embedded={true} />

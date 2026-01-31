@@ -32,14 +32,12 @@ export function Navbar() {
 
             {/* Centered Logo for Mobile */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <img src={maabLogo} alt="MAAB Logo" className="h-6 w-auto mix-blend-multiply opacity-80" />
+              <Link to="/">
+                <img src={maabLogo} alt="MAAB Logo" className="h-6 w-auto mix-blend-multiply opacity-80" />
+              </Link>
             </div>
 
             <div className="flex items-center space-x-3 relative z-10">
-              <Link to="/" className="text-xs hover:text-primary">
-                Home
-              </Link>
-
               {isAuthenticated && (
                 <button
                   onClick={handleLogout}
@@ -71,14 +69,12 @@ export function Navbar() {
 
               {/* Centered Logo */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <img src={maabLogo} alt="MAAB Logo" className="h-8 w-auto mix-blend-multiply opacity-80" />
+                <Link to="/">
+                  <img src={maabLogo} alt="MAAB Logo" className="h-8 w-auto mix-blend-multiply opacity-80 hover:opacity-100 transition-opacity" />
+                </Link>
               </div>
 
               <div className="flex items-center space-x-6">
-                <Link to="/" className="hover:text-primary">
-                  Home
-                </Link>
-
                 {isAuthenticated && (
                   <button
                     onClick={handleLogout}

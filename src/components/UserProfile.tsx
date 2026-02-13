@@ -9,12 +9,12 @@ export function UserProfile() {
   const { user, updateUserProfile } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    surname: user?.surname || "",
-    email: user?.email || "",
-    phoneNumber: user?.phoneNumber || "",
-    region: user?.region || "",
-    city: user?.city || ""
+    name: "",
+    surname: "",
+    email: "",
+    phoneNumber: "",
+    region: "",
+    city: ""
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,6 +31,21 @@ export function UserProfile() {
     if (success) {
       setIsEditing(false);
     }
+  };
+
+  const handleEditClick = () => {
+    // Initialize form data with current user data when entering edit mode
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        surname: user.surname || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+        region: user.region || "",
+        city: user.city || ""
+      });
+    }
+    setIsEditing(true);
   };
 
   if (!user) {
@@ -111,9 +126,9 @@ export function UserProfile() {
               </div>
               <div className="flex gap-2">
                 <Button type="submit">Save Changes</Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsEditing(false)}
                 >
                   Cancel
@@ -148,7 +163,7 @@ export function UserProfile() {
                   <p className="text-lg">{user.city}</p>
                 </div>
               </div>
-              <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+              <Button onClick={handleEditClick}>Edit Profile</Button>
             </div>
           )}
         </CardContent>

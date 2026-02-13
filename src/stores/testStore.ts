@@ -6,6 +6,14 @@ interface QuestionRecording {
   timeSpent: number; // Time spent on this question in seconds
 }
 
+interface ResultMetric {
+  id: string;
+  title: string;
+  score: number;
+  color: string;
+  detail: string;
+}
+
 interface TestState {
   currentPart: number;
   setCurrentPart: (part: number) => void;
@@ -34,6 +42,10 @@ interface TestState {
     part3: string[];
   };
   fetchQuestions: () => Promise<void>;
+
+  // Results data
+  resultMetrics: ResultMetric[];
+  overallScore: number;
 
   resetTest: () => void;
 
@@ -91,6 +103,14 @@ const useTestStore = create<TestState>()(
       testCompleted: false,
       setTestCompleted: (completed) => set({ testCompleted: completed }),
 
+      resultMetrics: [
+        { id: "fluency", title: "Fluency & Coherence", score: 7.5, color: "bg-blue-500", detail: "You spoke at length without noticeable effort or loss of coherence. You demonstrated a good range of connectives and discourse markers." },
+        { id: "lexical", title: "Lexical Resource", score: 8.0, color: "bg-green-500", detail: "You used a wide range of vocabulary with very natural and sophisticated control of lexical features." },
+        { id: "grammar", title: "Grammar & Accuracy", score: 7.0, color: "bg-purple-500", detail: "You used a mix of simple and complex sentence forms. There were some minor errors but they did not impede communication." },
+        { id: "pronunciation", title: "Pronunciation", score: 7.5, color: "bg-orange-500", detail: "Your pronunciation was generally clear with effective use of intonation and stress." },
+      ],
+      overallScore: 7.5,
+
       questions: {
         part1: [],
         part2: [],
@@ -128,7 +148,14 @@ const useTestStore = create<TestState>()(
         notes: { 1: '', 2: '', 3: '' },
         isRecording: false,
         assessmentStatus: 'idle',
-        testCompleted: false
+        testCompleted: false,
+        resultMetrics: [
+          { id: "fluency", title: "Fluency & Coherence", score: 7.5, color: "bg-blue-500", detail: "You spoke at length without noticeable effort or loss of coherence. You demonstrated a good range of connectives and discourse markers." },
+          { id: "lexical", title: "Lexical Resource", score: 8.0, color: "bg-green-500", detail: "You used a wide range of vocabulary with very natural and sophisticated control of lexical features." },
+          { id: "grammar", title: "Grammar & Accuracy", score: 7.0, color: "bg-purple-500", detail: "You used a mix of simple and complex sentence forms. There were some minor errors but they did not impede communication." },
+          { id: "pronunciation", title: "Pronunciation", score: 7.5, color: "bg-orange-500", detail: "Your pronunciation was generally clear with effective use of intonation and stress." },
+        ],
+        overallScore: 7.5
       }),
 
       getTimeLimitForQuestion: (partId: number) => {

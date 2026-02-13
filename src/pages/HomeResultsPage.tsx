@@ -6,16 +6,8 @@ import { Button } from "@/components/ui/button";
 import useTestStore from "@/stores/testStore";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 
-// Mock data for results - in a real app this would come from the store or API
-const resultMetrics = [
-    { id: "fluency", title: "Fluency & Coherence", score: 7.5, color: "bg-blue-500", detail: "You spoke at length without noticeable effort or loss of coherence. You demonstrated a good range of connectives and discourse markers." },
-    { id: "lexical", title: "Lexical Resource", score: 8.0, color: "bg-green-500", detail: "You used a wide range of vocabulary with very natural and sophisticated control of lexical features." },
-    { id: "grammar", title: "Grammar & Accuracy", score: 7.0, color: "bg-purple-500", detail: "You used a mix of simple and complex sentence forms. There were some minor errors but they did not impede communication." },
-    { id: "pronunciation", title: "Pronunciation", score: 7.5, color: "bg-orange-500", detail: "Your pronunciation was generally clear with effective use of intonation and stress." },
-];
-
 export default function HomeResultsPage() {
-    const { testCompleted, setTestCompleted, resetTest } = useTestStore();
+    const { testCompleted, setTestCompleted, resetTest, resultMetrics, overallScore } = useTestStore();
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     const handleReset = () => {
@@ -96,7 +88,7 @@ export default function HomeResultsPage() {
                     </AuroraBackground>
                     <div className="relative z-10 text-center">
                         <h2 className="text-sm md:text-2xl font-medium text-gray-500 mb-1 md:mb-2">Overall Band Score</h2>
-                        <div className="text-6xl md:text-8xl font-bold text-gray-900 tracking-tighter">7.5</div>
+                        <div className="text-6xl md:text-8xl font-bold text-gray-900 tracking-tighter">{overallScore}</div>
                         <p className="text-xs md:text-base text-gray-400 mt-1 md:mt-2">Good User (C1)</p>
                     </div>
                 </motion.div>

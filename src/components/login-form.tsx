@@ -16,30 +16,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router";
 import maabLogo from "@/assets/maab_logo.png";
-import { useState } from "react";
-import useAuthStore from "@/stores/authStore";
-import { useNavigate } from "react-router";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuthForm } from "@/hooks/useAuthForm";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const login = useAuthStore(state => state.login);
-  const navigate = useNavigate();
+  const {
+    loginFormData,
+    setLoginFormData,
+    error,
+    handleLogin,
+    isLoading
+  } = useAuthForm();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(""); // Clear previous error
-    const [success, response] = await login(email, password);
-    if (success) {
-      navigate("/"); // Redirect to home or dashboard after login
-    } else {
-      setError(response.message || "Invalid email or password"); // From mock or backend error
-    }
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLoginFormData({ ...loginFormData, email: e.target.value });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLoginFormData({ ...loginFormData, password: e.target.value });
   };
 
   return (
@@ -57,7 +54,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleLogin}>
             <FieldGroup>
               {error && (
                 <Alert variant="destructive" className="mb-4">
@@ -71,8 +68,8 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={loginFormData.email}
+                  onChange={handleEmailChange}
                 />
               </Field>
               <Field>
@@ -81,12 +78,14 @@ export function LoginForm({
                   id="password"
                   type="password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={loginFormData.password}
+                  onChange={handlePasswordChange}
                 />
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Logging in..." : "Login"}
+                </Button>
                 <div className="text-center mt-2">
                   Don&apos;t have an account?{" "}
                   <Link

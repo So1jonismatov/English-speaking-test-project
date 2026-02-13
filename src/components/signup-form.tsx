@@ -20,86 +20,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router"
+import { useEffect } from "react"
+import { Link } from "react-router"
 import maabLogo from "@/assets/maab_logo.png"
-import useAuthStore from "@/stores/authStore";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-type Region = { id: number; name: string }
-type District = { id: number; name: string; region_id: number }
+import { useAuthForm } from "@/hooks/useAuthForm";
 
 export function SignupForm(props: React.ComponentProps<typeof Card>) {
-  const [regions, setRegions] = useState<Region[]>([])
-  const [districts, setDistricts] = useState<District[]>([])
-
-  const [name, setName] = useState<string>("");
-  const [surname, setSurname] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [phone, setPhone] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [dateOfBirth, setDateOfBirth] = useState<string>("");
-  const [region, setRegion] = useState<string>("");
-  const [district, setDistrict] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null)
-  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null)
-
-  const signup = useAuthStore(state => state.signup);
-  const navigate = useNavigate();
+  const {
+    signupFormData,
+    setSignupFormData,
+    error,
+    handleSignup,
+    isLoading,
+    regions,
+    districts,
+    filteredDistricts,
+    selectedRegion,
+    selectedDistrict,
+    setSelectedRegion,
+    setSelectedDistrict,
+    loadLocationData
+  } = useAuthForm();
 
   useEffect(() => {
-    fetch("/src/assets/regions.json")
-      .then((res) => res.json())
-      .then((data) => {
-        setRegions(data.regions)
-        setDistricts(data.districts)
-      })
-  }, [])
+    loadLocationData();
+  }, []);
 
-  const filteredDistricts = selectedRegion
-    ? districts.filter((d) => d.region_id === selectedRegion.id)
-    : []
+  // Handlers for form inputs
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, name: e.target.value });
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  const handleSurnameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, surname: e.target.value });
+  };
 
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, email: e.target.value });
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, phoneNumber: e.target.value });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, password: e.target.value });
+  };
+
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, confirmPassword: e.target.value });
+  };
+
+  const handleDateOfBirthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignupFormData({ ...signupFormData, dateOfBirth: e.target.value });
+  };
+
+  const handleRegionChange = (value: string | null) => {
+    if (value !== null) {
+      setSignupFormData({ 
+        ...signupFormData, 
+        region: value,
+        district: "" // Reset district when region changes
+      });
+      const regionObj = regions.find(r => r.id === Number(value)) ?? null;
+      setSelectedRegion(regionObj);
+      setSelectedDistrict(null);
     }
+  };
 
-    try {
-      const userData = {
-        name,
-        surname,
-        email,
-        phoneNumber: phone,
-        password,
-        dateOfBirth,
-        region,
-        district,
-      };
-
-      const [success, response] = await signup(userData);
-
-      if (success) {
-        navigate("/");
-      } else {
-        setError(response.message || "An error occurred during signup");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-      console.error("Signup error:", err);
-    } finally {
-      setIsLoading(false);
+  const handleDistrictChange = (value: string | null) => {
+    if (value !== null) {
+      setSignupFormData({ ...signupFormData, district: value });
+      const districtObj = districts.find(d => d.id === Number(value)) ?? null;
+      setSelectedDistrict(districtObj);
     }
   };
 
@@ -118,7 +112,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSignup}>
           <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field>
               <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -126,8 +120,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 id="name"
                 placeholder="John"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={signupFormData.name}
+                onChange={handleNameChange}
               />
             </Field>
 
@@ -137,8 +131,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 id="surname"
                 placeholder="Doe"
                 required
-                value={surname}
-                onChange={(e) => setSurname(e.target.value)}
+                value={signupFormData.surname}
+                onChange={handleSurnameChange}
               />
             </Field>
 
@@ -149,8 +143,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 type="email"
                 placeholder="m@example.com"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={signupFormData.email}
+                onChange={handleEmailChange}
               />
             </Field>
 
@@ -161,8 +155,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 type="tel"
                 placeholder="+998901234567"
                 required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={signupFormData.phoneNumber}
+                onChange={handlePhoneChange}
               />
             </Field>
 
@@ -170,8 +164,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
               <FieldLabel>Date of Birth</FieldLabel>
               <Input
                 type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
+                value={signupFormData.dateOfBirth}
+                onChange={handleDateOfBirthChange}
               />
             </Field>
 
@@ -181,8 +175,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 id="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={signupFormData.password}
+                onChange={handlePasswordChange}
               />
               <FieldDescription>
                 Must be at least 8 characters long.
@@ -195,23 +189,16 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
                 id="confirmPassword"
                 type="password"
                 required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                value={signupFormData.confirmPassword}
+                onChange={handleConfirmPasswordChange}
               />
             </Field>
 
             <Field>
               <FieldLabel>Region</FieldLabel>
               <Select
-                value={region}
-                onValueChange={(value: string | null) => {
-                  if (value !== null) {
-                    setRegion(value);
-                    setDistrict("");
-                    setSelectedRegion(regions.find(r => r.id === Number(value)) ?? null)
-                    setSelectedDistrict(null)
-                  }
-                }}
+                value={signupFormData.region}
+                onValueChange={handleRegionChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a region">
@@ -231,13 +218,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
             <Field>
               <FieldLabel>District</FieldLabel>
               <Select
-                value={district}
-                onValueChange={(value: string | null) => {
-                  if (value !== null) {
-                    setDistrict(value);
-                    setSelectedDistrict(districts.find(d => d.id === Number(value)) ?? null)
-                  }
-                }}
+                value={signupFormData.district}
+                onValueChange={handleDistrictChange}
                 disabled={!selectedRegion}
               >
                 <SelectTrigger>

@@ -46,7 +46,6 @@ function generateAuthToken(payload: JwtPayload) {
 }
 
 export async function login({ email, password }: { email: string; password: string }): Promise<[number, any]> {
-  await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
 
   const user = users.find(u => u.email === email && u.password === password);
 
@@ -70,7 +69,6 @@ export async function login({ email, password }: { email: string; password: stri
 }
 
 export async function signup(userData: Omit<User, 'id' | 'role'>): Promise<[number, any]> {
-  await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate network delay
 
   // Check if user already exists
   const existingUser = users.find(u => u.email === userData.email);
@@ -103,7 +101,6 @@ export async function signup(userData: Omit<User, 'id' | 'role'>): Promise<[numb
 }
 
 export async function getUser(token: string): Promise<[number, any]> {
-  await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate delay
 
   if (!token) {
     return [401, { message: 'No token provided' }];
@@ -137,7 +134,6 @@ export async function getUser(token: string): Promise<[number, any]> {
 
 // Mock for your grading endpoint (expand as needed for other APIs)
 export async function getGrading(userId: number): Promise<[number, any]> {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
   if (!userId) {
     return [400, { message: 'Invalid user ID' }];
   }

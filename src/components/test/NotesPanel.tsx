@@ -8,7 +8,8 @@ interface NotesPanelProps {
 }
 
 export function NotesPanel({ partId, embedded = false }: NotesPanelProps) {
-  const { notes, setNotes } = useTestStore();
+  const notes = useTestStore((state) => state.notes);
+  const setNotes = useTestStore((state) => state.setNotes);
 
   if (embedded) {
     return (

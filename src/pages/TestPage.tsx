@@ -1,4 +1,5 @@
 // TestPage.tsx
+import { useEffect } from "react";
 import { Play } from "lucide-react";
 import { Link } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,17 @@ import useTestStore from "@/stores/testStore";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 
 export default function TestPage() {
-  const { questions } = useTestStore();
+  const { questions, fetchQuestions } = useTestStore();
+
+  useEffect(() => {
+    if (
+      questions.part1.length === 0 &&
+      questions.part2.length === 0 &&
+      questions.part3.length === 0
+    ) {
+      fetchQuestions();
+    }
+  }, [questions, fetchQuestions]);
 
   return (
     <AuroraBackground>
@@ -26,7 +37,7 @@ export default function TestPage() {
                 </Link>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part1.map((question, index) => (
                   <div
@@ -50,7 +61,7 @@ export default function TestPage() {
                 </Link>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part2.map((question, index) => (
                   <div
@@ -74,7 +85,7 @@ export default function TestPage() {
                 </Link>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part3.map((question, index) => (
                   <div

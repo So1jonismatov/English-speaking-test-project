@@ -10,20 +10,30 @@ import {
 export const useTestLogic = (partId: number) => {
   const navigate = useNavigate();
 
-  const {
-    currentQuestionIndex,
-    setCurrentQuestionIndex,
-    questions,
-    getTimeLimitForQuestion,
-    questionRecordings,
-    setTimer,
-    setIsRecording,
-    isPartComplete,
-    isRecording,
-    assessmentStatus,
-    setAssessmentStatus,
-    setTestCompleted,
-  } = useTestStore();
+  const currentQuestionIndex = useTestStore(state => state.currentQuestionIndex);
+  const setCurrentQuestionIndex = useTestStore(state => state.setCurrentQuestionIndex);
+  const questions = useTestStore(state => state.questions);
+  const getTimeLimitForQuestion = useTestStore(state => state.getTimeLimitForQuestion);
+  const questionRecordings = useTestStore(state => state.questionRecordings);
+  const setTimer = useTestStore(state => state.setTimer);
+  const setIsRecording = useTestStore(state => state.setIsRecording);
+  const isPartComplete = useTestStore(state => state.isPartComplete);
+  const isRecording = useTestStore(state => state.isRecording);
+  const assessmentStatus = useTestStore(state => state.assessmentStatus);
+  const setAssessmentStatus = useTestStore(state => state.setAssessmentStatus);
+  const setTestCompleted = useTestStore(state => state.setTestCompleted);
+  const fetchQuestions = useTestStore((state) => state.fetchQuestions);
+
+  useEffect(() => {
+    // Only fetch if all parts are empty to avoid resetting if they were already loaded
+    if (
+      questions.part1.length === 0 &&
+      questions.part2.length === 0 &&
+      questions.part3.length === 0
+    ) {
+      fetchQuestions();
+    }
+  }, [questions, fetchQuestions]);
 
   const currentQuestions =
     partId === 1

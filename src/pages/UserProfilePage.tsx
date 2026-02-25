@@ -21,7 +21,6 @@ export default function UserProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Initialize form data when user changes
   useEffect(() => {
     if (user) {
       setFormData({
@@ -44,15 +43,12 @@ export default function UserProfilePage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // REMOVED: e.preventDefault() - This was breaking the inputs!
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // GUARD: Only submit if we're actually in editing mode
     if (!isEditing) return;
 
     setError("");
@@ -73,7 +69,7 @@ export default function UserProfilePage() {
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent any form submission
+    e.preventDefault();
     e.stopPropagation();
     setIsEditing(true);
     setError("");
@@ -82,7 +78,6 @@ export default function UserProfilePage() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    // Reset form to original values
     setFormData({
       name: user?.name || "",
       surname: user?.surname || "",

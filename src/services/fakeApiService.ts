@@ -1,8 +1,7 @@
 
-// Utility to convert WebM to WAV (since most browsers record WebM/Opus)
+
 async function convertBlobToWav(blob: Blob): Promise<Blob> {
     try {
-        // If it's already WAV, return as-is
         if (blob.type.includes("wav")) return blob;
 
         const audioContext = new (
@@ -11,14 +10,12 @@ async function convertBlobToWav(blob: Blob): Promise<Blob> {
         const arrayBuffer = await blob.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        // Create WAV file from AudioBuffer
         const numberOfChannels = audioBuffer.numberOfChannels;
         const sampleRate = audioBuffer.sampleRate;
         const length = audioBuffer.length * numberOfChannels * 2;
         const buffer = new ArrayBuffer(44 + length);
         const view = new DataView(buffer);
 
-        // WAV Header
         const writeString = (view: DataView, offset: number, string: string) => {
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
@@ -39,7 +36,6 @@ async function convertBlobToWav(blob: Blob): Promise<Blob> {
         writeString(view, 36, "data");
         view.setUint32(40, length, true);
 
-        // Write audio data
         const channels = [];
         for (let i = 0; i < numberOfChannels; i++) {
             channels.push(audioBuffer.getChannelData(i));
@@ -67,13 +63,7 @@ async function convertBlobToWav(blob: Blob): Promise<Blob> {
 
 export const fakeApiService = {
     submitAudio: async (blob: Blob, filename: string) => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Convert to WAV
         const wavBlob = await convertBlobToWav(blob);
-
-        // Trigger Download
         const url = URL.createObjectURL(wavBlob);
         const a = document.createElement("a");
         a.style.display = "none";
@@ -81,15 +71,11 @@ export const fakeApiService = {
         a.download = filename.endsWith('.wav') ? filename : `${filename}.wav`;
         document.body.appendChild(a);
         a.click();
-
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 100);
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
     },
 
     assessPart2: async () => {
-        // Simulate assessment time
         await new Promise(resolve => setTimeout(resolve, 4000));
     }
 };

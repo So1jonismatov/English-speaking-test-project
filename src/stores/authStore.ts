@@ -17,13 +17,13 @@ interface AuthState {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
-  
+
   // Authentication methods
   login: (email: string, password: string) => Promise<[boolean, any]>;
   signup: (userData: any) => Promise<[boolean, any]>;
   logout: () => void;
   initializeAuth: () => Promise<void>;
-  
+
   // User profile methods
   updateUserProfile: (updatedData: Partial<User>) => Promise<boolean>;
 }
@@ -33,7 +33,7 @@ const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('token'),
   loading: true,
   isAuthenticated: !!localStorage.getItem('token'),
-  
+
   initializeAuth: async () => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -53,10 +53,10 @@ const useAuthStore = create<AuthState>((set) => ({
     const [status, response] = await mockLogin({ email, password });
     if (status === 200) {
       localStorage.setItem('token', response.authToken);
-      set({ 
-        user: response.user, 
-        token: response.authToken, 
-        isAuthenticated: true 
+      set({
+        user: response.user,
+        token: response.authToken,
+        isAuthenticated: true
       });
       return [true, response];
     } else {
@@ -69,10 +69,10 @@ const useAuthStore = create<AuthState>((set) => ({
     const [status, response] = await mockSignup(userData);
     if (status === 201) {
       localStorage.setItem('token', response.authToken);
-      set({ 
-        user: response.user, 
-        token: response.authToken, 
-        isAuthenticated: true 
+      set({
+        user: response.user,
+        token: response.authToken,
+        isAuthenticated: true
       });
       return [true, response];
     } else {
@@ -87,7 +87,6 @@ const useAuthStore = create<AuthState>((set) => ({
   },
 
   updateUserProfile: async (updatedData) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
 
     set((state) => ({
       user: state.user ? { ...state.user, ...updatedData } : null

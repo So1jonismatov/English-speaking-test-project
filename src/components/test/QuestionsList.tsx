@@ -13,7 +13,7 @@ export function QuestionsList({
   currentQuestions,
   currentQuestionIndex,
 }: QuestionsListProps) {
-  const { questionRecordings } = useTestStore();
+  const questionRecordings = useTestStore((state) => state.questionRecordings);
 
   return (
     <Card className="h-full flex flex-col  border border-blue-300 bg-gray-50 rounded-2xl overflow-hidden">

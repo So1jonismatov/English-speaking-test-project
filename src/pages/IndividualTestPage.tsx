@@ -15,13 +15,11 @@ export default function IndividualTestPage() {
   const {
     currentQuestionIndex,
     currentQuestions,
-    isRecording,
     assessmentStatus,
     changeQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     isLastQuestion,
-    isCurrentQuestionRecorded,
     nextButtonDisabled,
   } = useTestLogic(partId);
 
@@ -30,7 +28,7 @@ export default function IndividualTestPage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-blue-50 flex items-center justify-center">
+    <div className="h-screen w-screen bg-gray-50 flex items-center justify-center">
       <div className="w-full p-5 h-full max-w-[1200px] max-h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-in-out flex flex-col min-h-0">
         <h1 className="text-3xl font-bold mb-6 text-center shrink-0">
           IELTS Speaking Test - Part {partId}

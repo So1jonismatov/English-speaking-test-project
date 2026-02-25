@@ -1,9 +1,16 @@
 // RecordingArea.tsx
-import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
+import { useRef, useMemo, memo, forwardRef } from "react";
+import { VoiceVisualizer } from "react-voice-visualizer";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent } from "@/components/ui/card";
 import { NotesPanel } from "./NotesPanel";
 import { useRecordingArea } from "@/hooks/useRecordingArea";
+
+const TimerDisplay = memo(forwardRef<HTMLDivElement, { className: string, initialText: string }>(
+  ({ className, initialText }, ref) => {
+    return <div ref={ref} className={className}>{initialText}</div>;
+  }
+), () => true);
 
 interface RecordingAreaProps {
   partId: number;
@@ -16,13 +23,18 @@ export function RecordingArea({
   currentQuestion,
   currentQuestionIndex,
 }: RecordingAreaProps) {
-  const { timer, setTimer, getTimeLimitForQuestion, setQuestionRecording } = useTestStore();
+  const timer = useTestStore((state) => state.timer);
+  const setTimer = useTestStore((state) => state.setTimer);
+  const getTimeLimitForQuestion = useTestStore((state) => state.getTimeLimitForQuestion);
+  const setQuestionRecording = useTestStore((state) => state.setQuestionRecording);
+  const desktopTimerRef = useRef<HTMLDivElement>(null);
+  const mobileTimerRef = useRef<HTMLDivElement>(null);
+
+  const timerDisplayRefs = useMemo(() => [desktopTimerRef, mobileTimerRef], []);
 
   const {
     recorderControls,
     isRecordingInProgress,
-    clearCanvas,
-    recordedBlob,
     error,
     formatTime,
     timerClass,
@@ -33,7 +45,8 @@ export function RecordingArea({
     timer,
     getTimeLimitForQuestion,
     setQuestionRecording,
-    setTimer
+    setTimer,
+    timerDisplayRefs
   });
 
   return (
@@ -45,7 +58,7 @@ export function RecordingArea({
         {/* Desktop Question Display */}
         <div className="hidden lg:block mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg mx-6 shrink-0">
           <p className="font-semibold text-xs text-blue-900 uppercase mb-1">Current Question: <em className="text-lg text-slate-800">{currentQuestion}</em></p>
-          <div className={timerClass}>{formatTime(timer)}</div>
+          <TimerDisplay ref={desktopTimerRef} className={timerClass} initialText={formatTime(timer)} />
         </div>
 
         {/* Mobile Header */}
@@ -54,7 +67,7 @@ export function RecordingArea({
             <p className="font-bold text-xs text-gray-400 uppercase">Question {currentQuestionIndex + 1}</p>
           </div>
           <p className="text-lg font-medium leading-tight">{currentQuestion}</p>
-          <div className={timerClass}>{formatTime(timer)}</div>
+          <TimerDisplay ref={mobileTimerRef} className={timerClass} initialText={formatTime(timer)} />
         </div>
 
         {error && (
@@ -70,12 +83,15 @@ export function RecordingArea({
               <VoiceVisualizer
                 controls={recorderControls}
                 isControlPanelShown={false}
+                isDefaultUIShown={false}
+                isProgressIndicatorOnHoverShown={false}
+                isProgressIndicatorShown={false}
                 height={180}
                 width="100%"
                 mainBarColor="#3b82f6"
                 secondaryBarColor="#93c5fd"
-                barWidth={3}
-                gap={2}
+                barWidth={1}
+                gap={1}
               />
             </div>
           </div>

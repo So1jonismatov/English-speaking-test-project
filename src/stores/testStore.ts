@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface QuestionRecording {
-  recording: string; // Store as base64 string for localStorage compatibility
-  timeSpent: number; // Time spent on this question in seconds
+  recording: string;
+  timeSpent: number;
 }
 
 interface ResultMetric {
@@ -18,7 +18,6 @@ interface TestState {
   currentPart: number;
   setCurrentPart: (part: number) => void;
 
-  // Current question in the part
   currentQuestionIndex: number;
   setCurrentQuestionIndex: (index: number) => void;
 
@@ -26,7 +25,6 @@ interface TestState {
   setTimer: (time: number | ((prevTime: number) => number)) => void;
   resetTimer: () => void;
 
-  // Recording state for each question
   questionRecordings: Record<number, Record<number, QuestionRecording | null>>; // partId -> questionIndex -> recording
   setQuestionRecording: (partId: number, questionIndex: number, recording: QuestionRecording | null) => void;
 
@@ -43,16 +41,13 @@ interface TestState {
   };
   fetchQuestions: () => Promise<void>;
 
-  // Results data
   resultMetrics: ResultMetric[];
   overallScore: number;
 
   resetTest: () => void;
 
-  // Get time limit for a specific question based on part
   getTimeLimitForQuestion: (partId: number) => number;
 
-  // Check if all questions in a part have been recorded
   isPartComplete: (partId: number) => boolean;
 
   assessmentStatus: 'idle' | 'pending' | 'completed';
@@ -71,7 +66,7 @@ const useTestStore = create<TestState>()(
       currentQuestionIndex: 0,
       setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
 
-      timer: 30, // 30 seconds for part 1, first question
+      timer: 30,
       setTimer: (time) =>
         set((state) => ({
           timer: typeof time === "function" ? time(state.timer) : time,
@@ -118,7 +113,6 @@ const useTestStore = create<TestState>()(
       },
 
       fetchQuestions: async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
 
         set({
           questions: {

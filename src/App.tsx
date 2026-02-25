@@ -8,10 +8,14 @@ export function App() {
   const { loading, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    // Initialize auth state on app load
     useAuthStore.getState().initializeAuth();
 
-    if (!loading && !isAuthenticated && window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
+    if (
+      !loading &&
+      !isAuthenticated &&
+      window.location.pathname !== "/login" &&
+      window.location.pathname !== "/signup"
+    ) {
       navigate("/login");
     }
   }, [isAuthenticated, loading, navigate]);

@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { fakeApiService } from "@/services/fakeApiService";
 
 export function base64ToBlob(
@@ -28,7 +27,7 @@ export const handleNextQuestion = async (
   currentQuestionIndex: number,
   currentQuestions: any[],
   questionRecordings: any,
-  navigate: (path: string) => void,
+  // navigate: (path: string) => void,
   changeQuestion: (index: number) => void,
   goToNextPart: () => Promise<void>,
   submitTestResults: () => Promise<void>,

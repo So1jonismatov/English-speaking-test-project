@@ -78,7 +78,7 @@ export const useTestLogic = (partId: number) => {
     ],
   );
 
-  const goToNextPart = async () => {
+  const goToNextPart = useCallback(async () => {
     if (partId < 3) {
       if (partId === 2) {
         setAssessmentStatus("pending");
@@ -92,13 +92,13 @@ export const useTestLogic = (partId: number) => {
     } else {
       navigate("/");
     }
-  };
+  }, [partId, setAssessmentStatus, navigate]);
 
-  const submitTestResults = async () => {
+  const submitTestResults = useCallback(async () => {
     setIsRecording(false);
     setTestCompleted(true);
     navigate("/");
-  };
+  }, [setIsRecording, setTestCompleted, navigate]);
 
   const goToNextQuestion = useCallback(async () => {
     await handleNextQuestion(
@@ -106,7 +106,7 @@ export const useTestLogic = (partId: number) => {
       currentQuestionIndex,
       currentQuestions,
       questionRecordings,
-      navigate,
+      // navigate,
       changeQuestion,
       goToNextPart,
       submitTestResults,

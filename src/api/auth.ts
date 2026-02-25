@@ -21,7 +21,26 @@ interface JwtPayload {
   exp: number;
 }
 
-// Mock user database
+export interface AuthResponse {
+  message?: string;
+  authToken?: string;
+  user?: Omit<User, 'password'>;
+}
+
+export interface LoginResponse {
+  authToken: string;
+  user: Omit<User, 'password'>;
+}
+
+export interface SignupResponse {
+  authToken: string;
+  user: Omit<User, 'password'>;
+}
+
+export interface UserResponse {
+  user: Omit<User, 'password'>;
+}
+
 const users: User[] = [
   {
     id: 1,
@@ -36,16 +55,14 @@ const users: User[] = [
   }
 ];
 
-// Generate JWT token
 function generateAuthToken(payload: JwtPayload) {
-  // Simple JWT-like token generation (for mock purposes only)
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
   const body = btoa(JSON.stringify(payload));
-  const signature = btoa('mock-signature'); // In real app, this would be computed
+  const signature = btoa('mock-signature');
   return `${header}.${body}.${signature}`;
 }
 
-export async function login({ email, password }: { email: string; password: string }): Promise<[number, any]> {
+export async function login({ email, password }: { email: string; password: string }): Promise<[number, AuthResponse]> {
 
   const user = users.find(u => u.email === email && u.password === password);
 
@@ -53,7 +70,6 @@ export async function login({ email, password }: { email: string; password: stri
     return [401, { message: 'Invalid email or password' }];
   }
 
-  // Create payload for JWT
   const payload: JwtPayload = {
     userId: user.id,
     email: user.email,
@@ -61,31 +77,27 @@ export async function login({ email, password }: { email: string; password: stri
   };
 
   const authToken = generateAuthToken(payload);
-  // Return user data without password
-  const userData = { ...user };
+  const userData: Omit<User, 'password'> = { ...user };
   delete (userData as any).password;
 
   return [200, { authToken, user: userData }];
 }
 
-export async function signup(userData: Omit<User, 'id' | 'role'>): Promise<[number, any]> {
+export async function signup(userData: Omit<User, 'id' | 'role'>): Promise<[number, AuthResponse]> {
 
-  // Check if user already exists
   const existingUser = users.find(u => u.email === userData.email);
   if (existingUser) {
     return [409, { message: 'User with this email already exists' }];
   }
 
-  // Create new user
   const newUser: User = {
-    id: users.length + 1, // Simple ID generation
+    id: users.length + 1,
     ...userData,
     role: 'user',
   };
 
   users.push(newUser);
 
-  // Create payload for JWT
   const payload: JwtPayload = {
     userId: newUser.id,
     email: newUser.email,
@@ -93,50 +105,43 @@ export async function signup(userData: Omit<User, 'id' | 'role'>): Promise<[numb
   };
 
   const authToken = generateAuthToken(payload);
-  // Return user data without password
-  const returnUserData = { ...newUser };
+  const returnUserData: Omit<User, 'password'> = { ...newUser };
   delete (returnUserData as any).password;
 
   return [201, { authToken, user: returnUserData }];
 }
 
-export async function getUser(token: string): Promise<[number, any]> {
+export async function getUser(token: string): Promise<[number, AuthResponse]> {
 
   if (!token) {
     return [401, { message: 'No token provided' }];
   }
 
   try {
-    // Decode the token to get user info
     const decoded: JwtPayload = jwtDecode(token);
 
-    // Check if token is expired
     const currentTime = Math.floor(Date.now() / 1000);
     if (decoded.exp && decoded.exp < currentTime) {
       return [401, { message: 'Token expired' }];
     }
 
-    // Find user by ID from token
     const user = users.find(u => u.id === decoded.userId);
     if (!user) {
       return [401, { message: 'User not found' }];
     }
 
-    // Return user data without password
-    const userData = { ...user };
+    const userData: Omit<User, 'password'> = { ...user };
     delete (userData as any).password;
 
     return [200, { user: userData }];
-  } catch (error) {
+  } catch (_error) {
     return [401, { message: 'Invalid token' }];
   }
 }
 
-// Mock for your grading endpoint (expand as needed for other APIs)
-export async function getGrading(userId: number): Promise<[number, any]> {
+export async function getGrading(userId: number): Promise<[number, { score: number; feedback: string } | { message: string }]> {
   if (!userId) {
     return [400, { message: 'Invalid user ID' }];
   }
-  // Simulated data
   return [200, { score: 7.5, feedback: 'Good pronunciation, but improve fluency.' }];
 }

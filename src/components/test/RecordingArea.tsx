@@ -18,12 +18,12 @@ interface RecordingAreaProps {
   currentQuestionIndex: number;
 }
 
-export function RecordingArea({
+export const RecordingArea = memo(({
   partId,
   currentQuestion,
   currentQuestionIndex,
-}: RecordingAreaProps) {
-  const timer = useTestStore((state) => state.timer);
+}: RecordingAreaProps) => {
+  const timer = useTestStore.getState().timer;
   const setTimer = useTestStore((state) => state.setTimer);
   const getTimeLimitForQuestion = useTestStore((state) => state.getTimeLimitForQuestion);
   const setQuestionRecording = useTestStore((state) => state.setQuestionRecording);
@@ -61,7 +61,6 @@ export function RecordingArea({
           <TimerDisplay ref={desktopTimerRef} className={timerClass} initialText={formatTime(timer)} />
         </div>
 
-        {/* Mobile Header */}
         <div className="lg:hidden p-4 bg-white border-b z-10 shrink-0">
           <div className="flex justify-between items-start mb-2">
             <p className="font-bold text-xs text-gray-400 uppercase">Question {currentQuestionIndex + 1}</p>
@@ -133,4 +132,8 @@ export function RecordingArea({
       </CardContent>
     </Card>
   );
-}
+}, (prev, next) => {
+  return prev.partId === next.partId &&
+    prev.currentQuestion === next.currentQuestion &&
+    prev.currentQuestionIndex === next.currentQuestionIndex;
+});

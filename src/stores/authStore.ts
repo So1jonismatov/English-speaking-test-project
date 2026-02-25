@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { login as mockLogin, getUser as mockGetUser, signup as mockSignup } from '@/api/auth';
+import type { AuthResponse } from '@/api/auth';
 
 interface User {
   id: number;
@@ -19,8 +20,8 @@ interface AuthState {
   isAuthenticated: boolean;
 
   // Authentication methods
-  login: (email: string, password: string) => Promise<[boolean, any]>;
-  signup: (userData: any) => Promise<[boolean, any]>;
+  login: (email: string, password: string) => Promise<[boolean, AuthResponse]>;
+  signup: (userData: any) => Promise<[boolean, AuthResponse]>;
   logout: () => void;
   initializeAuth: () => Promise<void>;
 
@@ -38,8 +39,8 @@ const useAuthStore = create<AuthState>((set) => ({
     const token = localStorage.getItem('token');
     if (token) {
       const [status, response] = await mockGetUser(token);
-      if (status === 200) {
-        set({ user: response.user, token, loading: false, isAuthenticated: true });
+      if (status === 200 && response.user) {
+        set({ user: response.user as User, token, loading: false, isAuthenticated: true });
       } else {
         localStorage.removeItem('token');
         set({ user: null, token: null, loading: false, isAuthenticated: false });
@@ -49,9 +50,9 @@ const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (email: string, password: string): Promise<[boolean, any]> => {
+  login: async (email: string, password: string): Promise<[boolean, AuthResponse]> => {
     const [status, response] = await mockLogin({ email, password });
-    if (status === 200) {
+    if (status === 200 && response.authToken && response.user) {
       localStorage.setItem('token', response.authToken);
       set({
         user: response.user,
@@ -65,9 +66,9 @@ const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  signup: async (userData: any): Promise<[boolean, any]> => {
+  signup: async (userData: any): Promise<[boolean, AuthResponse]> => {
     const [status, response] = await mockSignup(userData);
-    if (status === 201) {
+    if (status === 201 && response.authToken && response.user) {
       localStorage.setItem('token', response.authToken);
       set({
         user: response.user,

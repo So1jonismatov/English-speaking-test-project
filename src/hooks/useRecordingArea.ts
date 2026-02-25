@@ -6,13 +6,15 @@ interface UseRecordingAreaProps {
   currentQuestionIndex: number;
   timer: number;
   getTimeLimitForQuestion: (partId: number) => number;
-  setQuestionRecording: (partId: number, questionIndex: number, recording: any) => void;
+  setQuestionRecording: (partId: number, questionIndex: number, recording: { recording: string; timeSpent: number }) => void;
   setTimer: (time: number | ((prevTime: number) => number)) => void;
   timerDisplayRefs: React.RefObject<HTMLDivElement | null>[];
 }
 
 interface UseRecordingAreaReturn {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   visualizerOptions: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recorderControls: any;
   isRecordingInProgress: boolean;
   stopRecording: () => void;
@@ -21,7 +23,7 @@ interface UseRecordingAreaReturn {
   recordedBlob: Blob | null;
   error: string | null;
   sessionInfoRef: React.RefObject<{ partId: number; currentQuestionIndex: number }>;
-  timerRef: React.RefObject<any>;
+  timerRef: React.MutableRefObject<number | null>;
   formatTime: (seconds: number) => string;
   timerClass: string;
   handleToggleRecording: () => void;
@@ -52,7 +54,7 @@ export const useRecordingArea = ({
   timerDisplayRefs
 }: UseRecordingAreaProps): UseRecordingAreaReturn => {
   const sessionInfoRef = useRef({ partId, currentQuestionIndex });
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<number | null>(null);
   const currentTimerValueRef = useRef(timer);
 
   const visualizerOptions = useMemo(() => ({
@@ -86,7 +88,7 @@ export const useRecordingArea = ({
     setTimer(initial);
     currentTimerValueRef.current = initial;
     clearCanvas();
-    if (timerRef.current) (timerRef.current as any).pause();
+    // No longer need timerRef.current.pause() if we use NodeJS.Timeout
 
     // Reset display for all refs
     timerDisplayRefs.forEach(ref => {
@@ -131,15 +133,16 @@ export const useRecordingArea = ({
         });
       };
 
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         timeLeft -= 1;
         currentTimerValueRef.current = timeLeft;
         updateDisplay(timeLeft);
 
         if (timeLeft <= 0) {
-          clearInterval(timerRef.current);
+          clearInterval(timerRef.current!);
           if (stopRecordingRef.current) stopRecordingRef.current();
           currentTimerValueRef.current = 0;
+          timerRef.current = null;
           updateDisplay(0);
         }
       }, 1000);

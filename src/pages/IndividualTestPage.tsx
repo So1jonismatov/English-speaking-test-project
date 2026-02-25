@@ -49,7 +49,6 @@ export default function IndividualTestPage() {
             {/* Middle Column: Recording Area (50%) */}
             <div className="flex-1 lg:w-2/4 h-full min-h-0">
               <RecordingArea
-                key={`${partId}-${currentQuestionIndex}`}
                 partId={partId}
                 currentQuestion={currentQuestions[currentQuestionIndex]}
                 currentQuestionIndex={currentQuestionIndex}

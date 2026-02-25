@@ -1,3 +1,4 @@
+import { memo } from "react";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -8,12 +9,12 @@ interface QuestionsListProps {
   onSelectQuestion: (index: number) => void;
 }
 
-export function QuestionsList({
+export const QuestionsList = memo(({
   partId,
   currentQuestions,
   currentQuestionIndex,
-}: QuestionsListProps) {
-  const questionRecordings = useTestStore((state) => state.questionRecordings);
+}: QuestionsListProps) => {
+  const partRecordings = useTestStore((state) => state.questionRecordings[partId]);
 
   return (
     <Card className="h-full flex flex-col  border border-blue-300 bg-gray-50 rounded-2xl overflow-hidden">
@@ -24,7 +25,7 @@ export function QuestionsList({
         <div className="space-y-3">
           {currentQuestions.map((question, index) => {
             const hasRecording =
-              questionRecordings[partId]?.[index]?.recording;
+              partRecordings?.[index]?.recording;
             return (
               <div
                 key={index}
@@ -52,4 +53,4 @@ export function QuestionsList({
       </CardContent>
     </Card>
   );
-}
+});

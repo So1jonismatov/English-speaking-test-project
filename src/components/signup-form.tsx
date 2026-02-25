@@ -45,7 +45,7 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
 
   useEffect(() => {
     loadLocationData();
-  }, []);
+  }, [loadLocationData]);
 
   // Handlers for form inputs
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,8 +78,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
 
   const handleRegionChange = (value: string | null) => {
     if (value !== null) {
-      setSignupFormData({ 
-        ...signupFormData, 
+      setSignupFormData({
+        ...signupFormData,
         region: value,
         district: "" // Reset district when region changes
       });

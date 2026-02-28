@@ -56,6 +56,7 @@ export const useRecordingArea = ({
   const sessionInfoRef = useRef({ partId, currentQuestionIndex });
   const timerRef = useRef<number | null>(null);
   const currentTimerValueRef = useRef(timer);
+  const finalTimeSpentRef = useRef<number>(0);
 
   const visualizerOptions = useMemo(() => ({
     onStartRecording: () => {
@@ -151,6 +152,23 @@ export const useRecordingArea = ({
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+
+      // Reset timer when recording stops
+      const initial = getTimeLimitForQuestion(partId);
+      finalTimeSpentRef.current = initial - currentTimerValueRef.current;
+
+      setTimer(initial);
+      currentTimerValueRef.current = initial;
+
+      // Update displays to initial time
+      const formatted = formatTime(initial);
+      timerDisplayRefs.forEach(ref => {
+        if (ref.current) {
+          ref.current.textContent = formatted;
+          ref.current.classList.remove("bg-red-100", "text-red-700", "animate-pulse");
+          ref.current.classList.add("bg-gray-50", "text-gray-800");
+        }
+      });
     }
 
     return () => {
@@ -164,13 +182,12 @@ export const useRecordingArea = ({
     if (recordedBlob && !isRecordingInProgress) {
       const { partId: savedPartId, currentQuestionIndex: savedIndex } = sessionInfoRef.current;
       const initialTime = getTimeLimitForQuestion(savedPartId);
-      const timeSpent = initialTime - currentTimerValueRef.current;
 
       blobToBase64(recordedBlob)
         .then((base64Recording) => {
           setQuestionRecording(savedPartId, savedIndex, {
             recording: base64Recording,
-            timeSpent: timeSpent > 0 ? timeSpent : initialTime,
+            timeSpent: finalTimeSpentRef.current > 0 ? finalTimeSpentRef.current : initialTime,
           });
         })
         .catch((err) => console.error("Save error:", err));

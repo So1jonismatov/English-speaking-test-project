@@ -28,10 +28,10 @@ export default function IndividualTestPage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-gray-50 flex items-center justify-center">
-      <div className="w-full p-5 h-full max-w-[1200px] max-h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-in-out flex flex-col min-h-0">
-        <h1 className="text-3xl font-bold mb-6 text-center shrink-0">
-          IELTS Speaking Test - Part {partId}
+    <div className="h-screen w-screen bg-[#F0F7EE] flex items-center justify-center overflow-hidden">
+      <div className="w-full p-4 md:p-8 h-full max-w-[1600px] flex flex-col min-h-0">
+        <h1 className="text-md md:text-3xl font-bold mb-6 text-center shrink-0">
+          <span className="text-[#DC143C]">IELTS</span>  Speaking Test: Part {partId}
         </h1>
 
         <div className="flex-1 min-h-0 w-full overflow-hidden">

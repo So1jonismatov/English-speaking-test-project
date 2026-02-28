@@ -18,23 +18,23 @@ export const NotesPanel = memo(({ partId, embedded = false }: NotesPanelProps) =
         value={notesForPart || ""}
         onChange={(e) => setNotes(partId, e.target.value)}
         placeholder="Take notes here..."
-        className="h-full w-full resize-none bg-transparent border-none focus-visible:ring-0"
+        className="h-full w-full resize-none border-0 bg-transparent focus-visible:ring-0 p-0"
       />
     );
   }
 
   return (
-    <Card className="h-full flex flex-col  border bg-gray-50 border-blue-300 shadow-md">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-medium text-gray-700">Notes</CardTitle>
+    <Card className="h-full flex flex-col border-0 shadow-none bg-yellow-50">
+      <CardHeader className="pb-3 border-0">
+        <CardTitle className="text-lg sm:text-2xl font-medium text-amber-900/80">Notes</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-0 relative min-h-[300px]">
-        <div className="absolute inset-0 p-3">
+        <div className="absolute inset-0">
           <Textarea
             value={notesForPart || ""}
             onChange={(e) => setNotes(partId, e.target.value)}
             placeholder="Type your notes here..."
-            className="w-full h-full resize-none border-gray-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-white  text-base rounded-md p-4 leading-relaxed"
+            className="w-full h-full resize-none border-0 focus-visible:ring-0 bg-yellow-50 text-base p-0 md:p-4 leading-relaxed text-amber-900"
           />
         </div>
       </CardContent>

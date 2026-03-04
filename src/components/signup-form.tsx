@@ -44,8 +44,8 @@ export function SignupForm(props: React.ComponentProps<typeof Card>) {
   } = useAuthForm();
 
   useEffect(() => {
-    loadLocationData();
-  }, [loadLocationData]);
+    loadLocationData().then(()=>{console.log("Regions are fetched")});
+  }, []);
 
   // Handlers for form inputs
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {

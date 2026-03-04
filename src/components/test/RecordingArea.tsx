@@ -30,7 +30,6 @@ export const RecordingArea = memo(({
   const setQuestionRecording = useTestStore((state) => state.setQuestionRecording);
   const desktopTimerRef = useRef<HTMLDivElement>(null);
   const mobileTimerRef = useRef<HTMLDivElement>(null);
-
   const timerDisplayRefs = useMemo(() => [desktopTimerRef, mobileTimerRef], []);
 
   const {

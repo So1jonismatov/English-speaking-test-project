@@ -1,7 +1,7 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from 'react';
 import { login as mockLogin, getUser as mockGetUser, signup as mockSignup } from '@/api/auth'; // Import mocks
-import type { AuthResponse } from '@/api/auth';
+import type { AuthResponse } from '@/api/auth.types.ts';
 import React from 'react';
 
 interface User {

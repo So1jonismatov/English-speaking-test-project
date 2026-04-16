@@ -1,10 +1,18 @@
-import { fakeApiService } from "@/services/fakeApiService";
+import type { Question } from "@/api/api.types";
+
+type QuestionRecordings = Record<
+  number,
+  Record<number, { recording: string; timeSpent: number } | null>
+>;
 
 export function base64ToBlob(
   base64: string,
   mimeType: string = "audio/webm",
 ): Blob {
-  const byteCharacters = atob(base64);
+  const normalizedBase64 = base64.includes(",")
+    ? base64.split(",").pop() || ""
+    : base64;
+  const byteCharacters = atob(normalizedBase64);
   const byteArrays = [];
 
   for (let offset = 0; offset < byteCharacters.length; offset += 512) {
@@ -25,8 +33,8 @@ export function base64ToBlob(
 export const handleNextQuestion = async (
   partId: number,
   currentQuestionIndex: number,
-  currentQuestions: any[],
-  questionRecordings: any,
+  currentQuestions: Question[],
+  questionRecordings: QuestionRecordings,
   // navigate: (path: string) => void,
   changeQuestion: (index: number) => void,
   goToNextPart: () => Promise<void>,
@@ -41,13 +49,8 @@ export const handleNextQuestion = async (
     return;
   }
 
-  try {
-    const blob = base64ToBlob(currentRecording.recording, "audio/webm");
-    const filename = `Part${partId}_Question${currentQuestionIndex + 1}`;
-    await fakeApiService.submitAudio(blob, filename);
-  } catch (error) {
-    console.error("Failed to submit audio:", error);
-  }
+  // Note: Audio submission now happens when completing the entire test
+  // Individual question submissions removed to match backend API design
 
   if (currentQuestionIndex < currentQuestions.length - 1) {
     changeQuestion(currentQuestionIndex + 1);

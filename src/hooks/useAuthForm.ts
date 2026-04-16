@@ -28,15 +28,15 @@ interface UseAuthFormReturn {
   setError: (error: string) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  
+
   // Login fields
   loginFormData: LoginFormData;
   setLoginFormData: (data: LoginFormData) => void;
-  
+
   // Signup fields
   signupFormData: SignupFormData;
   setSignupFormData: (data: SignupFormData) => void;
-  
+
   // Regions/Districts for signup
   regions: Region[];
   districts: District[];
@@ -45,7 +45,7 @@ interface UseAuthFormReturn {
   selectedDistrict: District | null;
   setSelectedRegion: (region: Region | null) => void;
   setSelectedDistrict: (district: District | null) => void;
-  
+
   // Handlers
   handleLogin: (e: React.FormEvent) => Promise<void>;
   handleSignup: (e: React.FormEvent) => Promise<void>;
@@ -55,13 +55,13 @@ interface UseAuthFormReturn {
 export const useAuthForm = (): UseAuthFormReturn => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Login form data
   const [loginFormData, setLoginFormData] = useState<LoginFormData>({
     email: "",
     password: ""
   });
-  
+
   // Signup form data
   const [signupFormData, setSignupFormData] = useState<SignupFormData>({
     name: "",
@@ -74,7 +74,7 @@ export const useAuthForm = (): UseAuthFormReturn => {
     region: "",
     district: ""
   });
-  
+
   // Location data for signup
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -88,13 +88,13 @@ export const useAuthForm = (): UseAuthFormReturn => {
     e.preventDefault();
     setError(""); // Clear previous error
     setIsLoading(true);
-    
+
     try {
-      const [success, response] = await login(loginFormData.email, loginFormData.password);
-      if (success) {
+      const result = await login(loginFormData.email, loginFormData.password);
+      if (result.success) {
         navigate("/"); // Redirect to home or dashboard after login
       } else {
-        setError(response.message || "Invalid email or password"); // From mock or backend error
+        setError(result.message || "Invalid email or password");
       }
     } catch (err) {
       setError("An unexpected error occurred during login");
@@ -116,24 +116,29 @@ export const useAuthForm = (): UseAuthFormReturn => {
       return;
     }
 
+    // Validate region and district selected
+    if (!selectedRegion || !selectedDistrict) {
+      setError("Please select your region and district");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const userData = {
-        name: signupFormData.name,
-        surname: signupFormData.surname,
+        first_name: signupFormData.name,
+        last_name: signupFormData.surname,
         email: signupFormData.email,
-        phoneNumber: signupFormData.phoneNumber,
+        phone: signupFormData.phoneNumber || null,
         password: signupFormData.password,
-        dateOfBirth: signupFormData.dateOfBirth,
-        region: signupFormData.region,
-        district: signupFormData.district,
+        district_id: selectedDistrict.id,
       };
 
-      const [success, response] = await signup(userData);
+      const result = await signup(userData);
 
-      if (success) {
+      if (result.success) {
         navigate("/");
       } else {
-        setError(response.message || "An error occurred during signup");
+        setError(result.message || "An error occurred during signup");
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -165,15 +170,15 @@ export const useAuthForm = (): UseAuthFormReturn => {
     setError,
     isLoading,
     setIsLoading,
-    
+
     // Login fields
     loginFormData,
     setLoginFormData,
-    
+
     // Signup fields
     signupFormData,
     setSignupFormData,
-    
+
     // Regions/Districts for signup
     regions,
     districts,
@@ -182,7 +187,7 @@ export const useAuthForm = (): UseAuthFormReturn => {
     selectedDistrict,
     setSelectedRegion,
     setSelectedDistrict,
-    
+
     // Handlers
     handleLogin,
     handleSignup,

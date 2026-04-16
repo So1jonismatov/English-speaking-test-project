@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { NotesPanel } from "./NotesPanel";
 import { useRecordingArea } from "@/hooks/useRecordingArea";
 import { Play, Pause, Trash2 } from "lucide-react";
+import type { Question } from "@/api/api.types";
 
 const TimerDisplay = memo(forwardRef<HTMLDivElement, { className: string, initialText: string }>(
   ({ className, initialText }, ref) => {
@@ -15,7 +16,7 @@ const TimerDisplay = memo(forwardRef<HTMLDivElement, { className: string, initia
 
 interface RecordingAreaProps {
   partId: number;
-  currentQuestion: string;
+  currentQuestion: Question;
   currentQuestionIndex: number;
 }
 
@@ -77,6 +78,14 @@ export const RecordingArea = memo(({
     }
   }, [audioUrl]);
 
+  if (!currentQuestion) {
+    return (
+      <Card className="h-full flex items-center justify-center border-0 shadow-none">
+        <p className="text-gray-500">Loading question...</p>
+      </Card>
+    );
+  }
+
   return (
     <Card className={`h-full flex flex-col overflow-hidden transition-all duration-300 border-0 shadow-none`}>
 
@@ -85,7 +94,7 @@ export const RecordingArea = memo(({
         {/* Desktop Question Display */}
         <div className="hidden lg:flex mb-4 p-4 mx-6 shrink-0 items-center gap-4">
           <div className="flex-4">
-            <p className="text-xl text-slate-800 font-medium leading-tight">{currentQuestion}</p>
+            <p className="text-xl text-slate-800 font-medium leading-tight">{currentQuestion.question_text}</p>
           </div>
           <div className="flex-1 flex justify-end">
             <TimerDisplay ref={desktopTimerRef} className={timerClass} initialText={formatTime(timer)} />
@@ -96,7 +105,7 @@ export const RecordingArea = memo(({
           <div className="flex justify-between items-start mb-2">
             <p className="font-bold text-xs text-gray-400 uppercase">Question {currentQuestionIndex + 1}</p>
           </div>
-          <p className="text-lg font-medium leading-tight">{currentQuestion}</p>
+          <p className="text-lg font-medium leading-tight">{currentQuestion.question_text}</p>
           <TimerDisplay ref={mobileTimerRef} className={timerClass} initialText={formatTime(timer)} />
         </div>
 
@@ -148,65 +157,70 @@ export const RecordingArea = memo(({
               </div>
             </div>
 
-            {/* Notes (Slide 2 - Mobile Only Tabs) */}
-            <div className={`w-full h-full p-2 absolute inset-0 lg:hidden transition-opacity duration-300 ${activeTab === 'notes' ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'}`}>
-              <div className="h-full rounded-xl p-2 bg-yellow-50/10">
-                <NotesPanel partId={partId} embedded={true} />
-              </div>
+            {/* Notes Panel (Slide 2) */}
+            <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'notes' ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0'}`}>
+              <NotesPanel partId={partId} />
             </div>
           </div>
-        </div>
 
-        {/* Bottom Controls Area */}
-        <div className="p-6 flex justify-center items-center gap-6 lg:bg-transparent lg:border-none lg:pt-0">
-          {audioUrl && (
-            <audio ref={audioRef} src={audioUrl} className="hidden" />
-          )}
+          <div className="p-4 bg-white border-t space-y-4 shrink-0">
+            <div className="flex justify-center items-center gap-4">
+              <button
+                onClick={handleToggleRecording}
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${isRecordingInProgress
+                  ? "bg-red-500 hover:bg-red-600 animate-pulse scale-110"
+                  : "bg-blue-600 hover:bg-blue-700 hover:scale-105"
+                  }`}
+              >
+                {isRecordingInProgress ? (
+                  <div className="w-6 h-6 bg-white rounded-sm" />
+                ) : (
+                  <div className="w-6 h-6 bg-white rounded-full" />
+                )}
+              </button>
 
-          {/* Custom Play/Pause (Left of Record) */}
-          {!isRecordingInProgress && recorderControls.recordedBlob && (
-            <button
-              onClick={togglePlayback}
-              className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-50 text-blue-600 shadow-sm transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-right-4 duration-300"
-              title={isPlaying ? "Pause review" : "Play review"}
-            >
-              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
-            </button>
-          )}
+              {audioUrl && !isRecordingInProgress && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                  <button
+                    onClick={togglePlayback}
+                    className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-5 h-5 text-gray-700 fill-current" />
+                    ) : (
+                      <Play className="w-5 h-5 text-gray-700 fill-current" />
+                    )}
+                  </button>
+                  <audio ref={audioRef} src={audioUrl} className="hidden" />
 
-          <button
-            onClick={handleToggleRecording}
-            aria-label={isRecordingInProgress ? "Stop Recording" : "Start Recording"}
-            className={`
-              w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-105 active:scale-95 shrink-0
-              ${isRecordingInProgress
-                ? "bg-red-500 ring-4 ring-red-100"
-                : "bg-blue-600 ring-4 ring-blue-100"}
-            `}
-          >
-            {isRecordingInProgress ? (
-              <div className="w-5 h-5 bg-white rounded-sm" />
-            ) : (
-              <div className="w-0 h-0 border-t-10 border-t-transparent border-l-16 border-l-white border-b-10 border-b-transparent ml-1" />
-            )}
-          </button>
+                  <button
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                      }
+                      setIsPlaying(false);
+                      recorderControls.clearCanvas();
+                      setQuestionRecording(partId, currentQuestionIndex, null);
+                    }}
+                    className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors group"
+                    title="Delete recording"
+                  >
+                    <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600" />
+                  </button>
+                </div>
+              )}
+            </div>
 
-          {/* Custom Delete (Right of Record) */}
-          {!isRecordingInProgress && recorderControls.recordedBlob && (
-            <button
-              onClick={() => { recorderControls.clearCanvas(); setIsPlaying(false); }}
-              className="w-12 h-12 rounded-full flex items-center justify-center bg-red-50 text-red-400 shadow-sm transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-left-4 duration-300"
-              title="Delete and re-record"
-            >
-              <Trash2 size={20} />
-            </button>
-          )}
+            <div className="flex items-center justify-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isRecordingInProgress ? 'bg-red-500 animate-ping' : 'bg-gray-300'}`} />
+              <span className="text-sm font-medium text-gray-500">
+                {isRecordingInProgress ? "Recording Answer..." : audioUrl ? "Recording Saved" : "Ready to Record"}
+              </span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
-}, (prev, next) => {
-  return prev.partId === next.partId &&
-    prev.currentQuestion === next.currentQuestion &&
-    prev.currentQuestionIndex === next.currentQuestionIndex;
 });

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import useTestStore from "@/stores/testStore";
 import {
@@ -6,13 +6,17 @@ import {
   handlePreviousQuestion,
   isNextButtonDisabled,
 } from "@/functions/Test_functions";
+import { submitCompleteTest } from "@/services/testSubmission.service";
 
 export const useTestLogic = (partId: number) => {
   const navigate = useNavigate();
+  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
 
   const currentQuestionIndex = useTestStore(state => state.currentQuestionIndex);
   const setCurrentQuestionIndex = useTestStore(state => state.setCurrentQuestionIndex);
   const questions = useTestStore(state => state.questions);
+  const questionsLoading = useTestStore(state => state.questionsLoading);
+  const questionsError = useTestStore(state => state.questionsError);
   const getTimeLimitForQuestion = useTestStore(state => state.getTimeLimitForQuestion);
   const questionRecordings = useTestStore(state => state.questionRecordings);
   const setTimer = useTestStore(state => state.setTimer);
@@ -21,7 +25,7 @@ export const useTestLogic = (partId: number) => {
   const isRecording = useTestStore(state => state.isRecording);
   const assessmentStatus = useTestStore(state => state.assessmentStatus);
   const setAssessmentStatus = useTestStore(state => state.setAssessmentStatus);
-  const setTestCompleted = useTestStore(state => state.setTestCompleted);
+  const setPendingAssessment = useTestStore(state => state.setPendingAssessment);
   const fetchQuestions = useTestStore((state) => state.fetchQuestions);
 
   useEffect(() => {
@@ -31,20 +35,21 @@ export const useTestLogic = (partId: number) => {
       questions.part2.length === 0 &&
       questions.part3.length === 0
     ) {
-      fetchQuestions();
+      void fetchQuestions();
     }
-  }, [questions, fetchQuestions]);
+  }, []); // Empty dependency array - only run once on mount
 
   const currentQuestions =
     partId === 1
-      ? questions.part1
+      ? (questions?.part1 || [])
       : partId === 2
-        ? questions.part2
-        : questions.part3;
+        ? (questions?.part2 || [])
+        : (questions?.part3 || []);
 
   useEffect(() => {
     if (assessmentStatus === "pending") return;
 
+    // Reset question index when switching parts
     if (partId !== useTestStore.getState().currentPart) {
       setCurrentQuestionIndex(0);
       useTestStore.getState().setCurrentPart(partId);
@@ -55,13 +60,17 @@ export const useTestLogic = (partId: number) => {
     setIsRecording(false);
   }, [
     partId,
-    currentQuestionIndex,
     getTimeLimitForQuestion,
     setTimer,
     setIsRecording,
     assessmentStatus,
     setCurrentQuestionIndex,
   ]);
+
+  // Ensure currentQuestionIndex is always valid for current part
+  const safeQuestionIndex = currentQuestions.length > 0
+    ? Math.min(currentQuestionIndex, currentQuestions.length - 1)
+    : 0;
 
   const changeQuestion = useCallback(
     (newIndex: number) => {
@@ -96,14 +105,28 @@ export const useTestLogic = (partId: number) => {
 
   const submitTestResults = useCallback(async () => {
     setIsRecording(false);
-    setTestCompleted(true);
-    navigate("/");
-  }, [setIsRecording, setTestCompleted, navigate]);
+    setIsSubmittingTest(true);
+
+    // Submit all test recordings to the backend
+    const allRecordings = useTestStore.getState().questionRecordings;
+    const allQuestions = useTestStore.getState().questions;
+
+    const result = await submitCompleteTest(allRecordings, allQuestions);
+
+    if (result.success) {
+      setPendingAssessment(result.testIds);
+      navigate("/");
+    } else {
+      alert(result.message || "Failed to submit test results. Please try again.");
+      setIsRecording(false);
+      setIsSubmittingTest(false);
+    }
+  }, [navigate, setIsRecording, setPendingAssessment]);
 
   const goToNextQuestion = useCallback(async () => {
     await handleNextQuestion(
       partId,
-      currentQuestionIndex,
+      safeQuestionIndex,
       currentQuestions,
       questionRecordings,
       // navigate,
@@ -114,7 +137,7 @@ export const useTestLogic = (partId: number) => {
     );
   }, [
     partId,
-    currentQuestionIndex,
+    safeQuestionIndex,
     currentQuestions,
     questionRecordings,
     navigate,
@@ -127,29 +150,32 @@ export const useTestLogic = (partId: number) => {
   const goToPreviousQuestion = useCallback(() => {
     handlePreviousQuestion(
       partId,
-      currentQuestionIndex,
+      safeQuestionIndex,
       changeQuestion,
       navigate,
     );
-  }, [partId, currentQuestionIndex, changeQuestion, navigate]);
+  }, [partId, safeQuestionIndex, changeQuestion, navigate]);
 
   const isLastQuestion =
-    currentQuestionIndex === currentQuestions.length - 1 && partId === 3;
+    safeQuestionIndex === currentQuestions.length - 1 && partId === 3;
 
   const isCurrentQuestionRecorded =
-    !!questionRecordings[partId]?.[currentQuestionIndex]?.recording;
+    !!questionRecordings[partId]?.[safeQuestionIndex]?.recording;
 
   const nextButtonDisabled = isNextButtonDisabled(
     isRecording,
     isCurrentQuestionRecorded,
     isLastQuestion,
     assessmentStatus,
-  );
+  ) || isSubmittingTest;
 
   return {
-    currentQuestionIndex,
+    currentQuestionIndex: safeQuestionIndex,
     currentQuestions,
+    questionsLoading,
+    questionsError,
     isRecording,
+    isSubmittingTest,
     assessmentStatus,
     changeQuestion,
     goToNextQuestion,
@@ -157,5 +183,6 @@ export const useTestLogic = (partId: number) => {
     isLastQuestion,
     isCurrentQuestionRecorded,
     nextButtonDisabled,
+    retryFetchQuestions: fetchQuestions,
   };
 };

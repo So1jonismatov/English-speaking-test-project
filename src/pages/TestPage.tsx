@@ -41,10 +41,10 @@ export default function TestPage() {
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part1.map((question, index) => (
                   <div
-                    key={index}
+                    key={question.id || index}
                     className="p-2 bg-gray-100 rounded mb-2 text-sm"
                   >
-                    {index + 1}. {question}
+                    {index + 1}. {question.question_text}
                   </div>
                 ))}
               </div>
@@ -65,10 +65,10 @@ export default function TestPage() {
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part2.map((question, index) => (
                   <div
-                    key={index}
+                    key={question.id || index}
                     className="p-2 bg-gray-100 rounded mb-2 text-sm"
                   >
-                    {index + 1}. {question}
+                    {index + 1}. {question.question_text}
                   </div>
                 ))}
               </div>
@@ -89,10 +89,10 @@ export default function TestPage() {
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {questions.part3.map((question, index) => (
                   <div
-                    key={index}
+                    key={question.id || index}
                     className="p-2 bg-gray-100 rounded mb-2 text-sm"
                   >
-                    {index + 1}. {question}
+                    {index + 1}. {question.question_text}
                   </div>
                 ))}
               </div>

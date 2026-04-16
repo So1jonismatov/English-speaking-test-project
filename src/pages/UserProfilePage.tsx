@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuroraBackground } from "@/components/ui/aurora-background";
+import type { User } from "@/api/api.types";
 
 export default function UserProfilePage() {
   const { user, loading, updateUserProfile } = useAuthStore();
@@ -47,25 +48,17 @@ export default function UserProfilePage() {
 }
 
 interface UserProfileFormProps {
-  user: {
-    id: number;
-    name: string;
-    surname: string;
-    email: string;
-    phoneNumber: string;
-    region: string;
-    city: string;
-  };
+  user: User;
   updateUserProfile: (data: any) => Promise<boolean>;
 }
 
 function UserProfileForm({ user, updateUserProfile }: UserProfileFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user.name || "",
-    surname: user.surname || "",
+    name: user.name || user.first_name || "",
+    surname: user.surname || user.last_name || "",
     email: user.email || "",
-    phoneNumber: user.phoneNumber || "",
+    phoneNumber: user.phoneNumber || user.phone || "",
     region: user.region || "",
     city: user.city || "",
   });

@@ -1,7 +1,7 @@
 // IndividualTestPage.tsx
 import { useParams } from "react-router";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Download } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Download, RefreshCcw } from "lucide-react";
 import { QuestionsList } from "@/components/test/QuestionsList";
 import { RecordingArea } from "@/components/test/RecordingArea";
 import { NotesPanel } from "@/components/test/NotesPanel";
@@ -15,13 +15,58 @@ export default function IndividualTestPage() {
   const {
     currentQuestionIndex,
     currentQuestions,
+    questionsLoading,
+    questionsError,
+    isSubmittingTest,
     assessmentStatus,
     changeQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
     isLastQuestion,
     nextButtonDisabled,
+    retryFetchQuestions,
   } = useTestLogic(partId);
+
+  if (questionsLoading) {
+    return (
+      <div className="h-screen w-screen bg-[#F0F7EE] flex items-center justify-center">
+        <div className="text-2xl font-medium text-gray-600">Loading questions...</div>
+      </div>
+    );
+  }
+
+  if (questionsError) {
+    return (
+      <div className="h-screen w-screen bg-[#F0F7EE] flex items-center justify-center px-4">
+        <div className="max-w-lg rounded-2xl bg-white p-8 shadow-lg border text-center space-y-4">
+          <div className="flex justify-center text-red-500">
+            <AlertCircle className="h-10 w-10" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900">Could not load test questions</h2>
+          <p className="text-gray-600">{questionsError}</p>
+          <Button onClick={() => void retryFetchQuestions()} className="min-w-[180px]">
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQuestions || currentQuestions.length === 0) {
+    return (
+      <div className="h-screen w-screen bg-[#F0F7EE] flex items-center justify-center px-4">
+        <div className="max-w-lg rounded-2xl bg-white p-8 shadow-lg border text-center space-y-4">
+          <h2 className="text-2xl font-semibold text-gray-900">No questions available</h2>
+          <p className="text-gray-600">The server did not return any questions for this test.</p>
+          <Button onClick={() => void retryFetchQuestions()} variant="outline" className="min-w-[180px]">
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Reload Questions
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (assessmentStatus === "pending") {
     return <AssessmentLoading />;
@@ -50,7 +95,7 @@ export default function IndividualTestPage() {
             <div className="flex-1 lg:w-2/4 h-full min-h-0">
               <RecordingArea
                 partId={partId}
-                currentQuestion={currentQuestions[currentQuestionIndex]}
+                currentQuestion={currentQuestions?.[currentQuestionIndex]}
                 currentQuestionIndex={currentQuestionIndex}
               />
             </div>
@@ -77,7 +122,11 @@ export default function IndividualTestPage() {
             disabled={nextButtonDisabled}
             className={`min-w-[180px] shadow-md transition-all hover:scale-105 ${isLastQuestion ? "bg-green-600 hover:bg-green-700 shadow-green-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"}`}
           >
-            {isLastQuestion ? (
+            {isSubmittingTest ? (
+              <>
+                Submitting... <RefreshCcw className="ml-2 h-4 w-4 animate-spin" />
+              </>
+            ) : isLastQuestion ? (
               <>
                 Finish Test <Download className="ml-2 h-4 w-4" />
               </>

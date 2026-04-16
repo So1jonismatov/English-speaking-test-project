@@ -1,5 +1,51 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getApiErrorMessage, isApiUnauthorizedError } from '@/api/client';
+import { testApi } from '@/api/test.api';
+import type { Question, Test } from '@/api/api.types';
+import type { AssessmentMetric } from '@/services/testAssessment.service';
+import useAuthStore from '@/stores/authStore';
+
+const createEmptyQuestions = () => ({
+  part1: [] as Question[],
+  part2: [] as Question[],
+  part3: [] as Question[],
+  topic: '',
+});
+
+const normalizeQuestionList = (questions: unknown): Question[] => {
+  if (!Array.isArray(questions)) {
+    return [];
+  }
+
+  return questions
+    .map((question, index) => {
+      if (typeof question === 'string') {
+        const normalizedText = question.trim();
+
+        return normalizedText
+          ? { id: index + 1, question_text: normalizedText }
+          : null;
+      }
+
+      if (question && typeof question === 'object') {
+        const candidate = question as { id?: unknown; question_text?: unknown; question?: unknown };
+        const normalizedText = String(candidate.question_text ?? candidate.question ?? '').trim();
+
+        if (!normalizedText) {
+          return null;
+        }
+
+        return {
+          id: typeof candidate.id === 'number' ? candidate.id : index + 1,
+          question_text: normalizedText,
+        };
+      }
+
+      return null;
+    })
+    .filter((question): question is Question => question !== null);
+};
 
 interface QuestionRecording {
   recording: string;
@@ -13,6 +59,28 @@ interface ResultMetric {
   color: string;
   detail: string;
 }
+
+type AssessmentResultStatus = 'idle' | 'pending' | 'completed' | 'failed';
+
+const defaultResultMetrics = (): ResultMetric[] => [
+  { id: 'fluency', title: 'Fluency & Coherence', score: 0, color: 'bg-blue-500', detail: 'Feedback will appear here after the assessment is complete.' },
+  { id: 'lexical', title: 'Lexical Resource', score: 0, color: 'bg-green-500', detail: 'Feedback will appear here after the assessment is complete.' },
+  { id: 'grammar', title: 'Grammar & Accuracy', score: 0, color: 'bg-purple-500', detail: 'Feedback will appear here after the assessment is complete.' },
+  { id: 'pronunciation', title: 'Pronunciation', score: 0, color: 'bg-orange-500', detail: 'Feedback will appear here after the assessment is complete.' },
+];
+
+const emptySessionState = () => ({
+  currentPart: 1,
+  currentQuestionIndex: 0,
+  timer: 30,
+  questionRecordings: {} as Record<number, Record<number, QuestionRecording | null>>,
+  notes: { 1: '', 2: '', 3: '' },
+  isRecording: false,
+  assessmentStatus: 'idle' as const,
+  questions: createEmptyQuestions(),
+  questionsLoading: false,
+  questionsError: null as string | null,
+});
 
 interface TestState {
   currentPart: number;
@@ -35,14 +103,28 @@ interface TestState {
   setIsRecording: (recording: boolean) => void;
 
   questions: {
-    part1: string[];
-    part2: string[];
-    part3: string[];
+    part1: Question[];
+    part2: Question[];
+    part3: Question[];
+    topic?: string;
   };
-  fetchQuestions: () => Promise<void>;
+  questionsLoading: boolean;
+  questionsError: string | null;
+  fetchQuestions: () => Promise<boolean>;
 
   resultMetrics: ResultMetric[];
   overallScore: number;
+  resultSummary: string | null;
+  resultStatus: AssessmentResultStatus;
+  submittedTestIds: string[];
+  assessmentError: string | null;
+  latestTests: Test[];
+
+  setPendingAssessment: (testIds: string[]) => void;
+  setCompletedAssessment: (payload: { metrics: AssessmentMetric[]; overallScore: number; summary: string | null; tests: Test[] }) => void;
+  setFailedAssessment: (message: string) => void;
+  clearAssessmentResult: () => void;
+  resetTestSession: () => void;
 
   resetTest: () => void;
 
@@ -98,59 +180,111 @@ const useTestStore = create<TestState>()(
       testCompleted: false,
       setTestCompleted: (completed) => set({ testCompleted: completed }),
 
-      resultMetrics: [
-        { id: "fluency", title: "Fluency & Coherence", score: 7.5, color: "bg-blue-500", detail: "You spoke at length without noticeable effort or loss of coherence. You demonstrated a good range of connectives and discourse markers." },
-        { id: "lexical", title: "Lexical Resource", score: 8.0, color: "bg-green-500", detail: "You used a wide range of vocabulary with very natural and sophisticated control of lexical features." },
-        { id: "grammar", title: "Grammar & Accuracy", score: 7.0, color: "bg-purple-500", detail: "You used a mix of simple and complex sentence forms. There were some minor errors but they did not impede communication." },
-        { id: "pronunciation", title: "Pronunciation", score: 7.5, color: "bg-orange-500", detail: "Your pronunciation was generally clear with effective use of intonation and stress." },
-      ],
-      overallScore: 7.5,
+      resultMetrics: defaultResultMetrics(),
+      overallScore: 0,
+      resultSummary: null,
+      resultStatus: 'idle',
+      submittedTestIds: [],
+      assessmentError: null,
+      latestTests: [],
 
-      questions: {
-        part1: [],
-        part2: [],
-        part3: []
-      },
+      setPendingAssessment: (testIds) => set(() => ({
+        ...emptySessionState(),
+        testCompleted: false,
+        resultStatus: 'pending',
+        submittedTestIds: [...new Set(testIds)],
+        assessmentError: null,
+      })),
+
+      setCompletedAssessment: ({ metrics, overallScore, summary, tests }) => set({
+        resultMetrics: metrics,
+        overallScore,
+        resultSummary: summary,
+        resultStatus: 'completed',
+        testCompleted: true,
+        assessmentError: null,
+        latestTests: tests,
+      }),
+
+      setFailedAssessment: (message) => set({
+        resultStatus: 'failed',
+        testCompleted: false,
+        assessmentError: message,
+      }),
+
+      clearAssessmentResult: () => set({
+        resultMetrics: defaultResultMetrics(),
+        overallScore: 0,
+        resultSummary: null,
+        resultStatus: 'idle',
+        submittedTestIds: [],
+        assessmentError: null,
+        latestTests: [],
+        testCompleted: false,
+      }),
+
+      resetTestSession: () => set(() => ({
+        ...emptySessionState(),
+      })),
+
+      questions: createEmptyQuestions(),
+      questionsLoading: false,
+      questionsError: null,
 
       fetchQuestions: async () => {
+        set({ questionsLoading: true, questionsError: null });
 
-        set({
-          questions: {
-            part1: [
-              "What is your name?",
-              "Where are you from?",
-              "Do you work or study?",
-              "What do you like to do in your free time?"
-            ],
-            part2: [
-              "Describe a book that you have recently read. You should say: what the book was about, why you chose to read it, and how you felt about it."
-            ],
-            part3: [
-              "How important is reading in your culture?",
-              "Do you think digital books will replace physical books?",
-              "What are the benefits of reading to children?"
-            ]
+        try {
+          const response = await testApi.getQuestions();
+
+          if (response.status) {
+            const normalizedQuestions = {
+              part1: normalizeQuestionList(response.part1),
+              part2: normalizeQuestionList(response.part2),
+              part3: normalizeQuestionList(response.part3),
+              topic: response.topic || '',
+            };
+
+            const hasAnyQuestions =
+              normalizedQuestions.part1.length > 0 ||
+              normalizedQuestions.part2.length > 0 ||
+              normalizedQuestions.part3.length > 0;
+
+            set({
+              questions: normalizedQuestions,
+              questionsLoading: false,
+              questionsError: hasAnyQuestions ? null : 'The server returned no questions for this test.',
+            });
+
+            return hasAnyQuestions;
           }
-        });
+
+          const message = response.error || 'Failed to load test questions.';
+          set({ questionsLoading: false, questionsError: message });
+          return false;
+        } catch (error) {
+          if (isApiUnauthorizedError(error)) {
+            useAuthStore.getState().clearAuth();
+          }
+
+          const message = getApiErrorMessage(error, 'Failed to load test questions.');
+          console.error('Error fetching questions:', error);
+          set({ questionsLoading: false, questionsError: message });
+          return false;
+        }
       },
 
-      resetTest: () => set({
-        currentPart: 1,
-        currentQuestionIndex: 0,
-        timer: 30,
-        questionRecordings: {},
-        notes: { 1: '', 2: '', 3: '' },
-        isRecording: false,
-        assessmentStatus: 'idle',
+      resetTest: () => set(() => ({
+        ...emptySessionState(),
+        resultMetrics: defaultResultMetrics(),
+        overallScore: 0,
+        resultSummary: null,
+        resultStatus: 'idle',
+        submittedTestIds: [],
+        assessmentError: null,
+        latestTests: [],
         testCompleted: false,
-        resultMetrics: [
-          { id: "fluency", title: "Fluency & Coherence", score: 7.5, color: "bg-blue-500", detail: "You spoke at length without noticeable effort or loss of coherence. You demonstrated a good range of connectives and discourse markers." },
-          { id: "lexical", title: "Lexical Resource", score: 8.0, color: "bg-green-500", detail: "You used a wide range of vocabulary with very natural and sophisticated control of lexical features." },
-          { id: "grammar", title: "Grammar & Accuracy", score: 7.0, color: "bg-purple-500", detail: "You used a mix of simple and complex sentence forms. There were some minor errors but they did not impede communication." },
-          { id: "pronunciation", title: "Pronunciation", score: 7.5, color: "bg-orange-500", detail: "Your pronunciation was generally clear with effective use of intonation and stress." },
-        ],
-        overallScore: 7.5
-      }),
+      })),
 
       getTimeLimitForQuestion: (partId: number) => {
         if (partId === 1) return 30; // 30 seconds for each question in part 1
@@ -166,6 +300,10 @@ const useTestStore = create<TestState>()(
             partId === 2 ? state.questions.part2 :
               state.questions.part3;
 
+        if (!currentQuestions || currentQuestions.length === 0) {
+          return false;
+        }
+
         // Check if all questions in this part have recordings
         for (let i = 0; i < currentQuestions.length; i++) {
           const recording = state.questionRecordings[partId]?.[i];
@@ -179,7 +317,24 @@ const useTestStore = create<TestState>()(
     {
       name: 'ielts-test-storage', // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => localStorage), // Use localStorage
-      // No custom serializer needed if recording is already a base64 string
+      partialize: (state) => ({
+        currentPart: state.currentPart,
+        currentQuestionIndex: state.currentQuestionIndex,
+        timer: state.timer,
+        questionRecordings: state.questionRecordings,
+        notes: state.notes,
+        isRecording: state.isRecording,
+        questions: state.questions,
+        resultMetrics: state.resultMetrics,
+        overallScore: state.overallScore,
+        resultSummary: state.resultSummary,
+        resultStatus: state.resultStatus,
+        submittedTestIds: state.submittedTestIds,
+        assessmentError: state.assessmentError,
+        latestTests: state.latestTests,
+        assessmentStatus: state.assessmentStatus,
+        testCompleted: state.testCompleted,
+      }),
     }
   )
 );

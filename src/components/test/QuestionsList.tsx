@@ -1,10 +1,11 @@
 import { memo } from "react";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Question } from "@/api/api.types";
 
 interface QuestionsListProps {
   partId: number;
-  currentQuestions: string[];
+  currentQuestions: Question[];
   currentQuestionIndex: number;
   onSelectQuestion: (index: number) => void;
 }
@@ -15,6 +16,19 @@ export const QuestionsList = memo(({
   currentQuestionIndex,
 }: QuestionsListProps) => {
   const partRecordings = useTestStore((state) => state.questionRecordings[partId]);
+
+  if (!currentQuestions || currentQuestions.length === 0) {
+    return (
+      <Card className="h-full flex flex-col border-0 shadow-none">
+        <CardHeader>
+          <CardTitle className="text-md sm:text-2xl font-medium">Questions</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex items-center justify-center p-4">
+          <p className="text-gray-500">No questions available</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full flex flex-col border-0 shadow-none">
@@ -28,7 +42,7 @@ export const QuestionsList = memo(({
               partRecordings?.[index]?.recording;
             return (
               <div
-                key={index}
+                key={question.id || index}
                 className={`p-3 hover:cursor-not-allowed rounded-lg transition-all border ${index === currentQuestionIndex
                   ? "bg-[#F3F5F6] border-[#5D737E] shadow-sm"
                   : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
@@ -44,7 +58,7 @@ export const QuestionsList = memo(({
                       <div className={`h-4 w-4 rounded-full border-2 ${index === currentQuestionIndex ? "border-[#5D737E]" : "border-gray-300"}`}></div>
                     )}
                   </div>
-                  <span className={`text-sm leading-relaxed ${index === currentQuestionIndex ? "text-gray-900 font-medium" : ""}`}>{question}</span>
+                  <span className={`text-sm leading-relaxed ${index === currentQuestionIndex ? "text-gray-900 font-medium" : ""}`}>{question.question_text}</span>
                 </div>
               </div>
             );

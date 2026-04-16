@@ -1,0 +1,653 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "FastAPI",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/test": {
+            "post": {
+                "summary": "Create Test",
+                "operationId": "create_test_test_post",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_create_test_test_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication token not found",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Not authenticated"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Authentication token expired",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Invalid token"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/test/{test_id}": {
+            "get": {
+                "summary": "Get Test",
+                "operationId": "get_test_test__test_id__get",
+                "parameters": [
+                    {
+                        "name": "test_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Test Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "test": "obj"
+                                }
+                            }
+                        },
+                        "500": {
+                            "description": "Internal server error",
+                            "content": {
+                                "application/json": {
+                                    "example": {
+                                        "status": false,
+                                        "error": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tests": {
+            "get": {
+                "summary": "Get Tests",
+                "operationId": "get_tests_tests_get",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "tests": "array"
+                                }
+                            }
+                        },
+                        "500": {
+                            "description": "Internal server error",
+                            "content": {
+                                "application/json": {
+                                    "example": {
+                                        "status": false,
+                                        "error": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/{test_id}": {
+            "get": {
+                "summary": "Status",
+                "operationId": "status_status__test_id__get",
+                "parameters": [
+                    {
+                        "name": "test_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Test Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "test_status": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "error": "Task not found"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication token not found",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Not authenticated"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Authentication token expired",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Invalid token"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/questions": {
+            "get": {
+                "summary": "Get Random Questions",
+                "operationId": "get_random_questions_questions_get",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "topic": "string",
+                                    "part1": [
+                                        {
+                                            "id": "integer",
+                                            "question_text": "string"
+                                        }
+                                    ],
+                                    "part2": [
+                                        {
+                                            "id": "integer",
+                                            "question_text": "string"
+                                        }
+                                    ],
+                                    "part3": [
+                                        {
+                                            "id": "integer",
+                                            "question_text": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "error": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication token not found",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Not authenticated"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Authentication token expired",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Invalid token"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "summary": "Login",
+                "operationId": "login_login_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "message": "Incorrect email or password"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "error": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/signup": {
+            "post": {
+                "summary": "Singup",
+                "operationId": "singup_signup_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignUpRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "message": "Something went wrong, please try again later."
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "error": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "get": {
+                "summary": "Logout",
+                "operationId": "logout_logout_get",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "message": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/me": {
+            "get": {
+                "summary": "User",
+                "operationId": "user_me_get",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "user": "obj"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "status": false,
+                                    "message": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ping": {
+            "get": {
+                "summary": "Ping",
+                "operationId": "ping_ping_get",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": true,
+                                    "time": "2026-02-02 15:12:02.367"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Body_create_test_test_post": {
+                "properties": {
+                    "questions": {
+                        "type": "string",
+                        "title": "Questions"
+                    },
+                    "part": {
+                        "type": "integer",
+                        "title": "Part"
+                    },
+                    "files": {
+                        "items": {
+                            "type": "string",
+                            "contentMediaType": "application/octet-stream"
+                        },
+                        "type": "array",
+                        "title": "Files"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "questions",
+                    "part",
+                    "files"
+                ],
+                "title": "Body_create_test_test_post"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "LoginRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "title": "Email"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "title": "LoginRequest"
+            },
+            "SignUpRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "Password"
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "title": "First Name"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "title": "Last Name"
+                    },
+                    "phone": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Phone"
+                    },
+                    "district_id": {
+                        "type": "integer",
+                        "title": "District Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email",
+                    "password",
+                    "first_name",
+                    "last_name",
+                    "district_id"
+                ],
+                "title": "SignUpRequest"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    },
+                    "input": {
+                        "title": "Input"
+                    },
+                    "ctx": {
+                        "type": "object",
+                        "title": "Context"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}

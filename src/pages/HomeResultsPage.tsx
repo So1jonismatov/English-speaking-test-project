@@ -1,20 +1,27 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
-import { Play, RotateCcw, Maximize2, X } from "lucide-react";
+import { AlertCircle, LoaderCircle, Maximize2, Play, RefreshCcw, RotateCcw, X } from "lucide-react";
 import { animate, stagger, spring, waapi } from "animejs";
 import { Button } from "@/components/ui/button";
 import useTestStore from "@/stores/testStore";
 import { AuroraBackground } from "@/components/ui/aurora-background";
+import { refreshAssessmentResults, type AssessmentProgressItem } from "@/services/testAssessment.service";
 
 export default function HomeResultsPage() {
   const {
-    testCompleted,
-    setTestCompleted,
+    resultStatus,
+    submittedTestIds,
+    assessmentError,
     resetTest,
     resultMetrics,
     overallScore,
+    resultSummary,
+    setCompletedAssessment,
+    setFailedAssessment,
   } = useTestStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<AssessmentProgressItem[]>([]);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
   const scoreCardRef = useRef<HTMLDivElement>(null);
   const metricsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -22,11 +29,56 @@ export default function HomeResultsPage() {
 
   const handleReset = () => {
     resetTest();
-    setTestCompleted(false);
   };
 
   useEffect(() => {
-    if (testCompleted) {
+    if (resultStatus !== "pending" || submittedTestIds.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshStatus = async () => {
+      setIsRefreshingStatus(true);
+
+      const response = await refreshAssessmentResults(submittedTestIds);
+
+      if (cancelled) {
+        return;
+      }
+
+      setProgress(response.progress);
+
+      if (response.state === "completed" && response.assessment) {
+        setCompletedAssessment({
+          metrics: response.assessment.metrics,
+          overallScore: response.assessment.overallScore,
+          summary: response.assessment.summary,
+          tests: response.assessment.tests,
+        });
+      }
+
+      if (response.state === "failed") {
+        setFailedAssessment(response.message || "Failed to refresh assessment status.");
+      }
+
+      setIsRefreshingStatus(false);
+    };
+
+    void refreshStatus();
+
+    const intervalId = window.setInterval(() => {
+      void refreshStatus();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [resultStatus, setCompletedAssessment, setFailedAssessment, submittedTestIds]);
+
+  useEffect(() => {
+    if (resultStatus === "completed") {
       if (scoreCardRef.current) {
         animate(scoreCardRef.current, {
           opacity: [0, 1],
@@ -46,7 +98,7 @@ export default function HomeResultsPage() {
         });
       }
     }
-  }, [testCompleted]);
+  }, [resultStatus]);
 
   useEffect(() => {
     if (selectedId && modalRef.current) {
@@ -62,7 +114,83 @@ export default function HomeResultsPage() {
     }
   }, [selectedId]);
 
-  if (!testCompleted) {
+  if (resultStatus === "pending") {
+    return (
+      <div className="h-screen w-screen overflow-y-auto relative">
+        <AuroraBackground className="absolute inset-0 z-0">
+          <div className="relative z-10 w-full h-full flex items-center justify-center p-6">
+            <div className="pointer-events-auto w-full max-w-2xl rounded-[2rem] border border-white/50 bg-white/85 p-8 shadow-2xl backdrop-blur-xl">
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <LoaderCircle className="h-8 w-8 animate-spin" />
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900">
+                  Assessment in progress
+                </h1>
+                <p className="max-w-xl text-base text-gray-600">
+                  Your recordings have been submitted. The AI assessment is still running, so this page will refresh automatically as each submitted test finishes.
+                </p>
+              </div>
+
+              <div className="mt-8 space-y-3">
+                {progress.length > 0 ? (
+                  progress.map((item) => (
+                    <div key={item.testId} className="flex items-center justify-between rounded-2xl border bg-white px-4 py-3 shadow-sm">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Submitted Test</p>
+                        <p className="font-semibold text-gray-900">{item.testId}</p>
+                      </div>
+                      <div className={`rounded-full px-3 py-1 text-sm font-medium ${item.state === "completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                        {item.status}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed bg-white/60 px-4 py-6 text-center text-gray-500">
+                    Waiting for the first status update from the backend.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <Button variant="outline" onClick={handleReset} disabled={isRefreshingStatus}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AuroraBackground>
+      </div>
+    );
+  }
+
+  if (resultStatus === "failed") {
+    return (
+      <div className="h-screen w-screen overflow-y-auto relative">
+        <AuroraBackground className="absolute inset-0 z-0">
+          <div className="relative z-10 w-full h-full flex items-center justify-center p-6">
+            <div className="pointer-events-auto w-full max-w-xl rounded-[2rem] border border-white/50 bg-white/85 p-8 shadow-2xl backdrop-blur-xl text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <h1 className="mt-4 text-3xl font-bold text-gray-900">Assessment failed</h1>
+              <p className="mt-3 text-gray-600">{assessmentError || "The backend could not finish grading this submission."}</p>
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <Button variant="outline" onClick={handleReset}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                </Button>
+                <Button onClick={() => window.location.reload()}>
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Reload Page
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AuroraBackground>
+      </div>
+    );
+  }
+
+  if (resultStatus !== "completed") {
     return (
       <div className="h-screen w-screen overflow-y-auto relative">
         <AuroraBackground className="absolute inset-0 z-0">
@@ -134,9 +262,11 @@ export default function HomeResultsPage() {
             <div className="text-6xl md:text-8xl font-bold text-gray-900 tracking-tighter">
               {overallScore}
             </div>
-            <p className="text-xs md:text-base text-gray-400 mt-1 md:mt-2">
-              Good User (C1)
-            </p>
+            {resultSummary && (
+              <p className="mx-auto mt-4 max-w-2xl text-sm md:text-base text-gray-500">
+                {resultSummary}
+              </p>
+            )}
           </div>
         </div>
 

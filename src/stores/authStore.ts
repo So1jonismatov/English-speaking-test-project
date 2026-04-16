@@ -1,29 +1,33 @@
 import { create } from 'zustand';
-import { login as mockLogin, getUser as mockGetUser, signup as mockSignup } from '@/api/auth';
-import type { AuthResponse } from '@/api/auth';
+import { authApi } from '@/api/auth.api';
+import { getApiErrorMessage, isApiUnauthorizedError } from '@/api/client';
+import type { ApiActionResult, User } from '@/api/api.types';
 
-interface User {
-  id: number;
-  email: string;
-  name: string;
-  surname: string;
-  phoneNumber: string;
-  region: string;
-  city: string;
-  role: string;
-}
+const toCompatibleUser = (user: User): User => ({
+  ...user,
+  name: user.name || user.first_name,
+  surname: user.surname || user.last_name,
+  phoneNumber: user.phoneNumber || user.phone || '',
+});
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
 
   // Authentication methods
-  login: (email: string, password: string) => Promise<[boolean, AuthResponse]>;
-  signup: (userData: any) => Promise<[boolean, AuthResponse]>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<ApiActionResult>;
+  signup: (userData: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string | null;
+    district_id: number;
+  }) => Promise<ApiActionResult>;
+  logout: () => Promise<void>;
   initializeAuth: () => Promise<void>;
+  clearAuth: () => void;
 
   // User profile methods
   updateUserProfile: (updatedData: Partial<User>) => Promise<boolean>;
@@ -31,64 +35,151 @@ interface AuthState {
 
 const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem('token'),
   loading: true,
-  isAuthenticated: !!localStorage.getItem('token'),
+  isAuthenticated: false,
+
+  clearAuth: () => {
+    set({ user: null, loading: false, isAuthenticated: false });
+  },
 
   initializeAuth: async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      const [status, response] = await mockGetUser(token);
-      if (status === 200 && response.user) {
-        set({ user: response.user as User, token, loading: false, isAuthenticated: true });
+    set({ loading: true });
+
+    try {
+      const response = await authApi.getUser();
+
+      if (response.status && response.user) {
+        set({
+          user: toCompatibleUser(response.user),
+          loading: false,
+          isAuthenticated: true,
+        });
       } else {
-        localStorage.removeItem('token');
-        set({ user: null, token: null, loading: false, isAuthenticated: false });
+        set({ user: null, loading: false, isAuthenticated: false });
       }
-    } else {
-      set({ loading: false });
+    } catch (error) {
+      if (!isApiUnauthorizedError(error)) {
+        console.error('Auth initialization error:', error);
+      }
+
+      set({ user: null, loading: false, isAuthenticated: false });
     }
   },
 
-  login: async (email: string, password: string): Promise<[boolean, AuthResponse]> => {
-    const [status, response] = await mockLogin({ email, password });
-    if (status === 200 && response.authToken && response.user) {
-      localStorage.setItem('token', response.authToken);
+  login: async (email: string, password: string): Promise<ApiActionResult> => {
+    set({ loading: true });
+
+    try {
+      const response = await authApi.login({ email, password });
+
+      if (!response.status) {
+        set({ loading: false, isAuthenticated: false });
+        return {
+          success: false,
+          message: response.message || 'Invalid email or password.',
+        };
+      }
+
+      const userResponse = await authApi.getUser();
+
+      if (!userResponse.status || !userResponse.user) {
+        set({ user: null, loading: false, isAuthenticated: false });
+        return {
+          success: false,
+          message: userResponse.message || 'Login succeeded, but the user profile could not be loaded.',
+        };
+      }
+
       set({
-        user: response.user,
-        token: response.authToken,
-        isAuthenticated: true
+        user: toCompatibleUser(userResponse.user),
+        loading: false,
+        isAuthenticated: true,
       });
-      return [true, response];
-    } else {
-      console.error('Login failed:', response.message);
-      return [false, response];
+
+      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+
+      if (isApiUnauthorizedError(error)) {
+        set({ user: null, loading: false, isAuthenticated: false });
+      } else {
+        set({ loading: false });
+      }
+
+      return {
+        success: false,
+        message: getApiErrorMessage(error, 'Login failed.'),
+      };
     }
   },
 
-  signup: async (userData: any): Promise<[boolean, AuthResponse]> => {
-    const [status, response] = await mockSignup(userData);
-    if (status === 201 && response.authToken && response.user) {
-      localStorage.setItem('token', response.authToken);
+  signup: async (userData: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string | null;
+    district_id: number;
+  }): Promise<ApiActionResult> => {
+    set({ loading: true });
+
+    try {
+      const response = await authApi.signup(userData);
+
+      if (!response.status) {
+        set({ loading: false, isAuthenticated: false });
+        return {
+          success: false,
+          message: response.message || 'Signup failed.',
+        };
+      }
+
+      const userResponse = await authApi.getUser();
+
+      if (!userResponse.status || !userResponse.user) {
+        set({ user: null, loading: false, isAuthenticated: false });
+        return {
+          success: false,
+          message: userResponse.message || 'Signup succeeded, but the user profile could not be loaded.',
+        };
+      }
+
       set({
-        user: response.user,
-        token: response.authToken,
-        isAuthenticated: true
+        user: toCompatibleUser(userResponse.user),
+        loading: false,
+        isAuthenticated: true,
       });
-      return [true, response];
-    } else {
-      console.error('Signup failed:', response.message);
-      return [false, response];
+
+      return { success: true };
+    } catch (error) {
+      console.error('Signup error:', error);
+
+      if (isApiUnauthorizedError(error)) {
+        set({ user: null, loading: false, isAuthenticated: false });
+      } else {
+        set({ loading: false });
+      }
+
+      return {
+        success: false,
+        message: getApiErrorMessage(error, 'Signup failed.'),
+      };
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ user: null, token: null, isAuthenticated: false });
+  logout: async () => {
+    set({ loading: true });
+
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      set({ user: null, loading: false, isAuthenticated: false });
+    }
   },
 
   updateUserProfile: async (updatedData) => {
-
     set((state) => ({
       user: state.user ? { ...state.user, ...updatedData } : null
     }));

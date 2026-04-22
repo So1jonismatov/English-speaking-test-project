@@ -6,7 +6,7 @@ interface UseRecordingAreaProps {
   currentQuestionIndex: number;
   timer: number;
   getTimeLimitForQuestion: (partId: number) => number;
-  setQuestionRecording: (partId: number, questionIndex: number, recording: { recording: string; timeSpent: number }) => void;
+  setQuestionRecording: (partId: number, questionIndex: number, recording: { recording: string; timeSpent: number; mimeType?: string }) => void;
   setTimer: (time: number | ((prevTime: number) => number)) => void;
   timerDisplayRefs: React.RefObject<HTMLDivElement | null>[];
 }
@@ -44,6 +44,22 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
   });
 };
 
+const RECORDING_MIME_CANDIDATES = [
+  "audio/webm;codecs=opus",
+  "audio/ogg;codecs=opus",
+  "audio/webm",
+  "audio/ogg",
+  "audio/wav",
+];
+
+const getPreferredRecordingMimeType = (): string => {
+  if (typeof MediaRecorder === "undefined") {
+    return "";
+  }
+
+  return RECORDING_MIME_CANDIDATES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+};
+
 export const useRecordingArea = ({
   partId,
   currentQuestionIndex,
@@ -57,15 +73,14 @@ export const useRecordingArea = ({
   const timerRef = useRef<number | null>(null);
   const currentTimerValueRef = useRef(timer);
   const finalTimeSpentRef = useRef<number>(0);
+  const preferredMimeType = useMemo(() => getPreferredRecordingMimeType(), []);
 
   const visualizerOptions = useMemo(() => ({
     onStartRecording: () => {
       sessionInfoRef.current = { partId, currentQuestionIndex };
     },
-    mediaRecorderOptions: {
-      mimeType: MediaRecorder.isTypeSupported("audio/wav") ? "audio/wav" : "audio/webm",
-    },
-  }), [partId, currentQuestionIndex]);
+    mediaRecorderOptions: preferredMimeType ? { mimeType: preferredMimeType } : {},
+  }), [partId, currentQuestionIndex, preferredMimeType]);
 
   const recorderControls = useVoiceVisualizer(visualizerOptions);
 
@@ -188,11 +203,12 @@ export const useRecordingArea = ({
           setQuestionRecording(savedPartId, savedIndex, {
             recording: base64Recording,
             timeSpent: finalTimeSpentRef.current > 0 ? finalTimeSpentRef.current : initialTime,
+            mimeType: recordedBlob.type || preferredMimeType || 'audio/webm',
           });
         })
         .catch((err) => console.error("Save error:", err));
     }
-  }, [recordedBlob, isRecordingInProgress, getTimeLimitForQuestion, setQuestionRecording]);
+  }, [recordedBlob, isRecordingInProgress, getTimeLimitForQuestion, preferredMimeType, setQuestionRecording]);
 
   const timerClass = useMemo(() => {
     return `text-xl font-mono px-3 py-1 rounded transition-colors bg-gray-50 text-gray-800`;

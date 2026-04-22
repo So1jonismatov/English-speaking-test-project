@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { AlertCircle, LoaderCircle, Maximize2, Play, RefreshCcw, RotateCcw, X } from "lucide-react";
 import { animate, stagger, spring, waapi } from "animejs";
@@ -6,16 +6,21 @@ import { Button } from "@/components/ui/button";
 import useTestStore from "@/stores/testStore";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { refreshAssessmentResults, type AssessmentProgressItem } from "@/services/testAssessment.service";
+import { retryFailedSubmittedParts } from "@/services/testSubmission.service";
 
 export default function HomeResultsPage() {
   const {
     resultStatus,
     submittedTestIds,
+    submittedTestIdsByPart,
     assessmentError,
     resetTest,
     resultMetrics,
     overallScore,
     resultSummary,
+    questionRecordings,
+    questions,
+    setPendingAssessment,
     setCompletedAssessment,
     setFailedAssessment,
   } = useTestStore();
@@ -27,25 +32,29 @@ export default function HomeResultsPage() {
   const metricsRef = useRef<(HTMLDivElement | null)[]>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const effectiveSubmittedTestIdsByPart = useMemo(() => {
+    if (Object.keys(submittedTestIdsByPart).length > 0) {
+      return submittedTestIdsByPart;
+    }
+
+    return Object.fromEntries(
+      submittedTestIds.slice(0, 3).map((testId, index) => [index + 1, [testId]]),
+    );
+  }, [submittedTestIds, submittedTestIdsByPart]);
+
   const handleReset = () => {
     resetTest();
   };
 
-  useEffect(() => {
-    if (resultStatus !== "pending" || submittedTestIds.length === 0) {
+  const refreshStatus = async () => {
+    if (resultStatus === "completed" || submittedTestIds.length === 0 || isRefreshingStatus) {
       return;
     }
 
-    let cancelled = false;
+    setIsRefreshingStatus(true);
 
-    const refreshStatus = async () => {
-      setIsRefreshingStatus(true);
-
+    try {
       const response = await refreshAssessmentResults(submittedTestIds);
-
-      if (cancelled) {
-        return;
-      }
 
       setProgress(response.progress);
 
@@ -56,26 +65,55 @@ export default function HomeResultsPage() {
           summary: response.assessment.summary,
           tests: response.assessment.tests,
         });
+        return;
       }
 
-      if (response.state === "failed") {
-        setFailedAssessment(response.message || "Failed to refresh assessment status.");
+      if (response.state === "pending") {
+        if (resultStatus !== "pending") {
+          setPendingAssessment({
+            testIds: submittedTestIds,
+            testIdsByPart: effectiveSubmittedTestIdsByPart,
+          });
+        }
+        return;
       }
 
+      const failedTestIds = response.progress
+        .filter((item) => item.state === "failed")
+        .map((item) => item.testId);
+
+      if (failedTestIds.length > 0) {
+        const retryResult = await retryFailedSubmittedParts(
+          failedTestIds,
+          effectiveSubmittedTestIdsByPart,
+          questionRecordings,
+          questions,
+        );
+
+        if (retryResult.success) {
+          const retainedProgress = response.progress.filter((item) => item.state !== "failed");
+          const retryProgress: AssessmentProgressItem[] = retryResult.retriedParts.flatMap((part) =>
+            (retryResult.testIdsByPart[part] || []).map((testId) => ({
+              testId,
+              status: `Re-submitted part ${part}`,
+              state: "pending" as const,
+            })),
+          );
+
+          setProgress([...retainedProgress, ...retryProgress]);
+          setPendingAssessment({
+            testIds: retryResult.testIds,
+            testIdsByPart: retryResult.testIdsByPart,
+          });
+          return;
+        }
+      }
+
+      setFailedAssessment(response.message || "Failed to refresh assessment status.");
+    } finally {
       setIsRefreshingStatus(false);
-    };
-
-    void refreshStatus();
-
-    const intervalId = window.setInterval(() => {
-      void refreshStatus();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [resultStatus, setCompletedAssessment, setFailedAssessment, submittedTestIds]);
+    }
+  };
 
   useEffect(() => {
     if (resultStatus === "completed") {
@@ -128,7 +166,7 @@ export default function HomeResultsPage() {
                   Assessment in progress
                 </h1>
                 <p className="max-w-xl text-base text-gray-600">
-                  Your recordings have been submitted. The AI assessment is still running, so this page will refresh automatically as each submitted test finishes.
+                  Your recordings have been submitted. Use refresh to check the current status. If a submitted part fails, refresh will automatically re-submit only that failed part.
                 </p>
               </div>
 
@@ -153,9 +191,14 @@ export default function HomeResultsPage() {
               </div>
 
               <div className="mt-6 flex justify-center">
-                <Button variant="outline" onClick={handleReset} disabled={isRefreshingStatus}>
-                  <RotateCcw className="mr-2 h-4 w-4" /> Reset
-                </Button>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button onClick={() => void refreshStatus()} disabled={isRefreshingStatus || submittedTestIds.length === 0}>
+                    <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshingStatus ? "animate-spin" : ""}`} /> Refresh Status
+                  </Button>
+                  <Button variant="outline" onClick={handleReset} disabled={isRefreshingStatus}>
+                    <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -176,11 +219,11 @@ export default function HomeResultsPage() {
               <h1 className="mt-4 text-3xl font-bold text-gray-900">Assessment failed</h1>
               <p className="mt-3 text-gray-600">{assessmentError || "The backend could not finish grading this submission."}</p>
               <div className="mt-6 flex items-center justify-center gap-3">
+                <Button onClick={() => void refreshStatus()} disabled={isRefreshingStatus || submittedTestIds.length === 0}>
+                  <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshingStatus ? "animate-spin" : ""}`} /> Refresh Status
+                </Button>
                 <Button variant="outline" onClick={handleReset}>
                   <RotateCcw className="mr-2 h-4 w-4" /> Reset
-                </Button>
-                <Button onClick={() => window.location.reload()}>
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Reload Page
                 </Button>
               </div>
             </div>

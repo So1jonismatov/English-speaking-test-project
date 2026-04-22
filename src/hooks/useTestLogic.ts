@@ -23,8 +23,6 @@ export const useTestLogic = (partId: number) => {
   const setIsRecording = useTestStore(state => state.setIsRecording);
   const isPartComplete = useTestStore(state => state.isPartComplete);
   const isRecording = useTestStore(state => state.isRecording);
-  const assessmentStatus = useTestStore(state => state.assessmentStatus);
-  const setAssessmentStatus = useTestStore(state => state.setAssessmentStatus);
   const setPendingAssessment = useTestStore(state => state.setPendingAssessment);
   const fetchQuestions = useTestStore((state) => state.fetchQuestions);
 
@@ -47,8 +45,6 @@ export const useTestLogic = (partId: number) => {
         : (questions?.part3 || []);
 
   useEffect(() => {
-    if (assessmentStatus === "pending") return;
-
     // Reset question index when switching parts
     if (partId !== useTestStore.getState().currentPart) {
       setCurrentQuestionIndex(0);
@@ -63,7 +59,6 @@ export const useTestLogic = (partId: number) => {
     getTimeLimitForQuestion,
     setTimer,
     setIsRecording,
-    assessmentStatus,
     setCurrentQuestionIndex,
   ]);
 
@@ -89,19 +84,11 @@ export const useTestLogic = (partId: number) => {
 
   const goToNextPart = useCallback(async () => {
     if (partId < 3) {
-      if (partId === 2) {
-        setAssessmentStatus("pending");
-        setTimeout(() => {
-          setAssessmentStatus("completed");
-          navigate(`/test/${partId + 1}`);
-        }, 2000);
-      } else {
-        navigate(`/test/${partId + 1}`);
-      }
+      navigate(`/test/${partId + 1}`);
     } else {
       navigate("/");
     }
-  }, [partId, setAssessmentStatus, navigate]);
+  }, [partId, navigate]);
 
   const submitTestResults = useCallback(async () => {
     setIsRecording(false);
@@ -114,7 +101,10 @@ export const useTestLogic = (partId: number) => {
     const result = await submitCompleteTest(allRecordings, allQuestions);
 
     if (result.success) {
-      setPendingAssessment(result.testIds);
+      setPendingAssessment({
+        testIds: result.testIds,
+        testIdsByPart: result.testIdsByPart,
+      });
       navigate("/");
     } else {
       alert(result.message || "Failed to submit test results. Please try again.");
@@ -166,7 +156,6 @@ export const useTestLogic = (partId: number) => {
     isRecording,
     isCurrentQuestionRecorded,
     isLastQuestion,
-    assessmentStatus,
   ) || isSubmittingTest;
 
   return {
@@ -176,7 +165,6 @@ export const useTestLogic = (partId: number) => {
     questionsError,
     isRecording,
     isSubmittingTest,
-    assessmentStatus,
     changeQuestion,
     goToNextQuestion,
     goToPreviousQuestion,

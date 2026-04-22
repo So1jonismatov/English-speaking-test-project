@@ -2,7 +2,7 @@ import type { Question } from "@/api/api.types";
 
 type QuestionRecordings = Record<
   number,
-  Record<number, { recording: string; timeSpent: number } | null>
+  Record<number, { recording: string; timeSpent: number; mimeType?: string } | null>
 >;
 
 export function base64ToBlob(
@@ -90,12 +90,9 @@ export const isNextButtonDisabled = (
   isRecording: boolean,
   isCurrentQuestionRecorded: boolean,
   isLastQuestion: boolean,
-  assessmentStatus: string,
 ): boolean => {
   return (
     isRecording ||
-    (!isCurrentQuestionRecorded &&
-      !isLastQuestion &&
-      assessmentStatus !== "pending")
+    (!isCurrentQuestionRecorded && !isLastQuestion)
   );
 };

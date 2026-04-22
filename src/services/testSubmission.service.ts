@@ -11,11 +11,36 @@ export interface TestSubmissionData {
   files: Blob[];
 }
 
+type StoredQuestionRecording = {
+  recording: string;
+  timeSpent: number;
+  mimeType?: string;
+};
+
+type StoredQuestionRecordingsByPart = Record<number, Record<number, StoredQuestionRecording | null>>;
+
+type QuestionGroups = {
+  part1: Question[];
+  part2: Question[];
+  part3: Question[];
+};
+
+export type SubmittedTestIdsByPart = Record<number, string[]>;
+
 export interface TestSubmissionResult {
   success: boolean;
   message?: string;
   submittedParts: number[];
   testIds: string[];
+  testIdsByPart: SubmittedTestIdsByPart;
+}
+
+export interface RetryFailedSubmissionResult {
+  success: boolean;
+  message?: string;
+  retriedParts: number[];
+  testIds: string[];
+  testIdsByPart: SubmittedTestIdsByPart;
 }
 
 const getAudioFileExtension = (mimeType: string): string => {
@@ -40,6 +65,57 @@ const serializeQuestions = (questions: Question[]): string => {
       .map((question) => question.question_text.trim())
       .filter((questionText) => questionText.length > 0),
   );
+};
+
+const getQuestionsForPart = (part: number, questions: QuestionGroups): Question[] => {
+  if (part === 1) {
+    return questions.part1;
+  }
+
+  if (part === 2) {
+    return questions.part2;
+  }
+
+  return questions.part3;
+};
+
+const preparePartFiles = (
+  part: number,
+  partQuestions: Question[],
+  questionRecordings: StoredQuestionRecordingsByPart,
+): { success: true; files: Blob[] } | { success: false; message: string } => {
+  if (partQuestions.length === 0) {
+    return {
+      success: false,
+      message: `Part ${part} has no questions loaded. Please reload the test and try again.`,
+    };
+  }
+
+  const files: Blob[] = [];
+  const recordings = questionRecordings[part] || {};
+
+  for (let index = 0; index < partQuestions.length; index++) {
+    const recording = recordings[index];
+
+    if (!recording?.recording) {
+      return {
+        success: false,
+        message: `Part ${part}, question ${index + 1} is missing a recording.`,
+      };
+    }
+
+    try {
+      files.push(base64ToBlob(recording.recording, recording.mimeType || 'audio/webm'));
+    } catch (conversionError) {
+      console.error(`Error converting recording for part ${part} question ${index + 1}:`, conversionError);
+      return {
+        success: false,
+        message: `Part ${part}, question ${index + 1} could not be prepared for upload.`,
+      };
+    }
+  }
+
+  return { success: true, files };
 };
 
 const getKnownTestIds = async (): Promise<Set<string>> => {
@@ -88,6 +164,7 @@ export const submitTestAudio = async (
       message: `Part ${part} has no questions to submit.`,
       submittedParts: [],
       testIds: [],
+      testIdsByPart: {},
     };
   }
 
@@ -97,6 +174,7 @@ export const submitTestAudio = async (
       message: `Part ${part} is missing one or more recordings.`,
       submittedParts: [],
       testIds: [],
+      testIdsByPart: {},
     };
   }
 
@@ -120,6 +198,7 @@ export const submitTestAudio = async (
         message: response.message || response.error || `Part ${part} submission was rejected by the server.`,
         submittedParts: [],
         testIds: [],
+        testIdsByPart: {},
       };
     }
 
@@ -130,6 +209,7 @@ export const submitTestAudio = async (
       message: response.message,
       submittedParts: [part],
       testIds: resolvedTestIds,
+      testIdsByPart: { [part]: resolvedTestIds },
     };
   } catch (error) {
     if (isApiUnauthorizedError(error)) {
@@ -142,6 +222,7 @@ export const submitTestAudio = async (
       message: getApiErrorMessage(error, `Failed to submit part ${part}.`),
       submittedParts: [],
       testIds: [],
+      testIdsByPart: {},
     };
   }
 };
@@ -150,58 +231,29 @@ export const submitTestAudio = async (
  * Submit all parts of the test
  */
 export const submitCompleteTest = async (
-  questionRecordings: Record<number, Record<number, { recording: string; timeSpent: number } | null>>,
-  questions: {
-    part1: Question[];
-    part2: Question[];
-    part3: Question[];
-  }
+  questionRecordings: StoredQuestionRecordingsByPart,
+  questions: QuestionGroups,
 ): Promise<TestSubmissionResult> => {
   const submittedParts: number[] = [];
   const testIds: string[] = [];
+  const testIdsByPart: SubmittedTestIdsByPart = {};
 
   try {
     for (let part = 1; part <= 3; part++) {
-      const partQuestions = part === 1 ? questions.part1 : part === 2 ? questions.part2 : questions.part3;
+      const partQuestions = getQuestionsForPart(part, questions);
+      const preparedFiles = preparePartFiles(part, partQuestions, questionRecordings);
 
-      if (partQuestions.length === 0) {
+      if (!preparedFiles.success) {
         return {
           success: false,
-          message: `Part ${part} has no questions loaded. Please reload the test and try again.`,
+          message: preparedFiles.message,
           submittedParts,
           testIds,
+          testIdsByPart,
         };
       }
 
-      const files: Blob[] = [];
-      const recordings = questionRecordings[part] || {};
-
-      for (let i = 0; i < partQuestions.length; i++) {
-        const recording = recordings[i];
-
-        if (!recording?.recording) {
-          return {
-            success: false,
-            message: `Part ${part}, question ${i + 1} is missing a recording.`,
-            submittedParts,
-            testIds,
-          };
-        }
-
-        try {
-          files.push(base64ToBlob(recording.recording, 'audio/webm'));
-        } catch (conversionError) {
-          console.error(`Error converting recording for part ${part} question ${i + 1}:`, conversionError);
-          return {
-            success: false,
-            message: `Part ${part}, question ${i + 1} could not be prepared for upload.`,
-            submittedParts,
-            testIds,
-          };
-        }
-      }
-
-      const result = await submitTestAudio(part, partQuestions, files);
+      const result = await submitTestAudio(part, partQuestions, preparedFiles.files);
 
       if (!result.success) {
         console.error(`Failed to submit part ${part}`);
@@ -210,11 +262,13 @@ export const submitCompleteTest = async (
           message: result.message,
           submittedParts,
           testIds,
+          testIdsByPart,
         };
       }
 
       submittedParts.push(...result.submittedParts);
       testIds.push(...result.testIds);
+      testIdsByPart[part] = [...new Set(result.testIds)];
     }
 
     const uniqueTestIds = [...new Set(testIds)];
@@ -225,6 +279,7 @@ export const submitCompleteTest = async (
         message: 'The test was submitted, but the backend did not return any trackable test ids.',
         submittedParts,
         testIds: [],
+        testIdsByPart,
       };
     }
 
@@ -232,6 +287,7 @@ export const submitCompleteTest = async (
       success: true,
       submittedParts,
       testIds: uniqueTestIds,
+      testIdsByPart,
     };
   } catch (error) {
     console.error('Error submitting complete test:', error);
@@ -241,6 +297,70 @@ export const submitCompleteTest = async (
       message: getApiErrorMessage(error, 'Failed to submit the completed test.'),
       submittedParts,
       testIds,
+      testIdsByPart,
     };
   }
+};
+
+export const retryFailedSubmittedParts = async (
+  failedTestIds: string[],
+  submittedTestIdsByPart: SubmittedTestIdsByPart,
+  questionRecordings: StoredQuestionRecordingsByPart,
+  questions: QuestionGroups,
+): Promise<RetryFailedSubmissionResult> => {
+  const failedIdSet = new Set(failedTestIds.map((testId) => testId.trim()).filter(Boolean));
+  const retriedParts = Object.entries(submittedTestIdsByPart)
+    .filter(([, testIds]) => testIds.some((testId) => failedIdSet.has(testId)))
+    .map(([part]) => Number(part))
+    .filter((part) => Number.isFinite(part));
+
+  if (retriedParts.length === 0) {
+    return {
+      success: false,
+      message: 'The failed assessment could not be retried because no matching submitted part was found.',
+      retriedParts: [],
+      testIds: [...new Set(Object.values(submittedTestIdsByPart).flat())],
+      testIdsByPart: submittedTestIdsByPart,
+    };
+  }
+
+  const nextTestIdsByPart: SubmittedTestIdsByPart = Object.fromEntries(
+    Object.entries(submittedTestIdsByPart).map(([part, testIds]) => [part, [...new Set(testIds)]]),
+  );
+
+  for (const part of retriedParts) {
+    const partQuestions = getQuestionsForPart(part, questions);
+    const preparedFiles = preparePartFiles(part, partQuestions, questionRecordings);
+
+    if (!preparedFiles.success) {
+      return {
+        success: false,
+        message: preparedFiles.message,
+        retriedParts,
+        testIds: [...new Set(Object.values(nextTestIdsByPart).flat())],
+        testIdsByPart: nextTestIdsByPart,
+      };
+    }
+
+    const result = await submitTestAudio(part, partQuestions, preparedFiles.files);
+
+    if (!result.success || result.testIds.length === 0) {
+      return {
+        success: false,
+        message: result.message || `Part ${part} could not be re-submitted.`,
+        retriedParts,
+        testIds: [...new Set(Object.values(nextTestIdsByPart).flat())],
+        testIdsByPart: nextTestIdsByPart,
+      };
+    }
+
+    nextTestIdsByPart[part] = [...new Set(result.testIds)];
+  }
+
+  return {
+    success: true,
+    retriedParts,
+    testIds: [...new Set(Object.values(nextTestIdsByPart).flat())],
+    testIdsByPart: nextTestIdsByPart,
+  };
 };

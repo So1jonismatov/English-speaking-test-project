@@ -50,7 +50,10 @@ const normalizeQuestionList = (questions: unknown): Question[] => {
 interface QuestionRecording {
   recording: string;
   timeSpent: number;
+  mimeType?: string;
 }
+
+type SubmittedTestIdsByPart = Record<number, string[]>;
 
 interface ResultMetric {
   id: string;
@@ -76,7 +79,6 @@ const emptySessionState = () => ({
   questionRecordings: {} as Record<number, Record<number, QuestionRecording | null>>,
   notes: { 1: '', 2: '', 3: '' },
   isRecording: false,
-  assessmentStatus: 'idle' as const,
   questions: createEmptyQuestions(),
   questionsLoading: false,
   questionsError: null as string | null,
@@ -117,10 +119,11 @@ interface TestState {
   resultSummary: string | null;
   resultStatus: AssessmentResultStatus;
   submittedTestIds: string[];
+  submittedTestIdsByPart: SubmittedTestIdsByPart;
   assessmentError: string | null;
   latestTests: Test[];
 
-  setPendingAssessment: (testIds: string[]) => void;
+  setPendingAssessment: (payload: { testIds: string[]; testIdsByPart: SubmittedTestIdsByPart }) => void;
   setCompletedAssessment: (payload: { metrics: AssessmentMetric[]; overallScore: number; summary: string | null; tests: Test[] }) => void;
   setFailedAssessment: (message: string) => void;
   clearAssessmentResult: () => void;
@@ -131,9 +134,6 @@ interface TestState {
   getTimeLimitForQuestion: (partId: number) => number;
 
   isPartComplete: (partId: number) => boolean;
-
-  assessmentStatus: 'idle' | 'pending' | 'completed';
-  setAssessmentStatus: (status: 'idle' | 'pending' | 'completed') => void;
 
   testCompleted: boolean;
   setTestCompleted: (completed: boolean) => void;
@@ -174,9 +174,6 @@ const useTestStore = create<TestState>()(
       isRecording: false,
       setIsRecording: (recording) => set({ isRecording: recording }),
 
-      assessmentStatus: 'idle',
-      setAssessmentStatus: (status) => set({ assessmentStatus: status }),
-
       testCompleted: false,
       setTestCompleted: (completed) => set({ testCompleted: completed }),
 
@@ -185,15 +182,22 @@ const useTestStore = create<TestState>()(
       resultSummary: null,
       resultStatus: 'idle',
       submittedTestIds: [],
+      submittedTestIdsByPart: {},
       assessmentError: null,
       latestTests: [],
 
-      setPendingAssessment: (testIds) => set(() => ({
-        ...emptySessionState(),
+      setPendingAssessment: ({ testIds, testIdsByPart }) => set(() => ({
+        resultMetrics: defaultResultMetrics(),
+        overallScore: 0,
+        resultSummary: null,
         testCompleted: false,
         resultStatus: 'pending',
         submittedTestIds: [...new Set(testIds)],
+        submittedTestIdsByPart: Object.fromEntries(
+          Object.entries(testIdsByPart).map(([part, ids]) => [part, [...new Set(ids.filter(Boolean))]]),
+        ),
         assessmentError: null,
+        latestTests: [],
       })),
 
       setCompletedAssessment: ({ metrics, overallScore, summary, tests }) => set({
@@ -218,6 +222,7 @@ const useTestStore = create<TestState>()(
         resultSummary: null,
         resultStatus: 'idle',
         submittedTestIds: [],
+        submittedTestIdsByPart: {},
         assessmentError: null,
         latestTests: [],
         testCompleted: false,
@@ -281,6 +286,7 @@ const useTestStore = create<TestState>()(
         resultSummary: null,
         resultStatus: 'idle',
         submittedTestIds: [],
+        submittedTestIdsByPart: {},
         assessmentError: null,
         latestTests: [],
         testCompleted: false,
@@ -330,9 +336,9 @@ const useTestStore = create<TestState>()(
         resultSummary: state.resultSummary,
         resultStatus: state.resultStatus,
         submittedTestIds: state.submittedTestIds,
+        submittedTestIdsByPart: state.submittedTestIdsByPart,
         assessmentError: state.assessmentError,
         latestTests: state.latestTests,
-        assessmentStatus: state.assessmentStatus,
         testCompleted: state.testCompleted,
       }),
     }

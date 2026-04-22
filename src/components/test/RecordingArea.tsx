@@ -1,5 +1,5 @@
 // RecordingArea.tsx
-import { useRef, useMemo, memo, forwardRef, useState, useEffect } from "react";
+import { useRef, useMemo, memo, forwardRef, useState, useEffect, useCallback } from "react";
 import { VoiceVisualizer } from "react-voice-visualizer";
 import useTestStore from "@/stores/testStore";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,122 @@ const TimerDisplay = memo(forwardRef<HTMLDivElement, { className: string, initia
     return <div ref={ref} className={className}>{initialText}</div>;
   }
 ), () => true);
+
+const MobileTabSwitcher = memo(({
+  activeTab,
+  onShowRecording,
+  onShowNotes,
+}: {
+  activeTab: 'recording' | 'notes';
+  onShowRecording: () => void;
+  onShowNotes: () => void;
+}) => {
+  return (
+    <div className="lg:hidden flex p-1 bg-gray-100/50 rounded-lg mx-4 mt-2">
+      <button
+        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'recording'
+          ? 'bg-white text-blue-600 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1),inset_-1px_-1px_3px_rgba(255,255,255,0.8)]'
+          : 'text-gray-500 shadow-[2px_2px_5px_rgba(0,0,0,0.05),-2px_-2px_5px_rgba(255,255,255,0.8)]'}`}
+        onClick={onShowRecording}
+      >
+        Recording
+      </button>
+      <button
+        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'notes'
+          ? 'bg-white text-blue-600 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1),inset_-1px_-1px_3px_rgba(255,255,255,0.8)]'
+          : 'text-gray-500 shadow-[2px_2px_5px_rgba(0,0,0,0.05),-2px_-2px_5px_rgba(255,255,255,0.8)]'}`}
+        onClick={onShowNotes}
+      >
+        Scratchpad
+      </button>
+    </div>
+  );
+});
+
+const RecordButton = memo(({
+  isRecordingInProgress,
+  onToggle,
+}: {
+  isRecordingInProgress: boolean;
+  onToggle: () => void;
+}) => {
+  return (
+    <button
+      onClick={onToggle}
+      className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${isRecordingInProgress
+        ? "bg-red-500 hover:bg-red-600 animate-pulse scale-110"
+        : "bg-blue-600 hover:bg-blue-700 hover:scale-105"
+        }`}
+    >
+      {isRecordingInProgress ? (
+        <div className="w-6 h-6 bg-white rounded-sm" />
+      ) : (
+        <div className="w-6 h-6 bg-white rounded-full" />
+      )}
+    </button>
+  );
+});
+
+const PlaybackControls = memo(({
+  audioUrl,
+  isRecordingInProgress,
+  isPlaying,
+  audioRef,
+  onTogglePlayback,
+  onDeleteRecording,
+}: {
+  audioUrl: string | null;
+  isRecordingInProgress: boolean;
+  isPlaying: boolean;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  onTogglePlayback: () => void;
+  onDeleteRecording: () => void;
+}) => {
+  if (!audioUrl || isRecordingInProgress) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+      <button
+        onClick={onTogglePlayback}
+        className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+      >
+        {isPlaying ? (
+          <Pause className="w-5 h-5 text-gray-700 fill-current" />
+        ) : (
+          <Play className="w-5 h-5 text-gray-700 fill-current" />
+        )}
+      </button>
+      <audio ref={audioRef} src={audioUrl} className="hidden" />
+
+      <button
+        onClick={onDeleteRecording}
+        className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors group"
+        title="Delete recording"
+      >
+        <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600" />
+      </button>
+    </div>
+  );
+});
+
+const RecordingStatus = memo(({
+  isRecordingInProgress,
+  hasAudio,
+}: {
+  isRecordingInProgress: boolean;
+  hasAudio: boolean;
+}) => {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${isRecordingInProgress ? 'bg-red-500 animate-ping' : 'bg-gray-300'}`} />
+      <span className="text-sm font-medium text-gray-500">
+        {isRecordingInProgress ? "Recording Answer..." : hasAudio ? "Recording Saved" : "Ready to Record"}
+      </span>
+    </div>
+  );
+});
 
 interface RecordingAreaProps {
   partId: number;
@@ -54,20 +170,62 @@ export const RecordingArea = memo(({
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const audioUrl = useMemo(() => {
-    return recorderControls.recordedBlob ? URL.createObjectURL(recorderControls.recordedBlob) : null;
-  }, [recorderControls.recordedBlob]);
+  const audioUrl = useMemo(
+    () => (recorderControls.recordedBlob ? URL.createObjectURL(recorderControls.recordedBlob) : null),
+    [recorderControls.recordedBlob],
+  );
 
-  const togglePlayback = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.removeAttribute('src');
+        }
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
+  const showRecordingTab = useCallback(() => {
+    setActiveTab('recording');
+  }, []);
+
+  const showNotesTab = useCallback(() => {
+    setActiveTab('notes');
+  }, []);
+
+  const togglePlayback = useCallback(() => {
+    if (!audioRef.current) {
+      return;
+    }
+
+    setIsPlaying((currentValue) => {
+      if (!audioRef.current) {
+        return currentValue;
+      }
+
+      if (currentValue) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        void audioRef.current.play();
       }
-      setIsPlaying(!isPlaying);
+
+      return !currentValue;
+    });
+  }, []);
+
+  const handleDeleteRecording = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.removeAttribute('src');
     }
-  };
+
+    setIsPlaying(false);
+    recorderControls.clearCanvas();
+    setQuestionRecording(partId, currentQuestionIndex, null);
+  }, [currentQuestionIndex, partId, recorderControls, setQuestionRecording]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -116,25 +274,11 @@ export const RecordingArea = memo(({
         )}
 
 
-        {/* Mobile Tab Switcher */}
-        <div className="lg:hidden flex p-1 bg-gray-100/50 rounded-lg mx-4 mt-2">
-          <button
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'recording'
-              ? 'bg-white text-blue-600 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1),inset_-1px_-1px_3px_rgba(255,255,255,0.8)]'
-              : 'text-gray-500 shadow-[2px_2px_5px_rgba(0,0,0,0.05),-2px_-2px_5px_rgba(255,255,255,0.8)]'}`}
-            onClick={() => setActiveTab('recording')}
-          >
-            Recording
-          </button>
-          <button
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'notes'
-              ? 'bg-white text-blue-600 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1),inset_-1px_-1px_3px_rgba(255,255,255,0.8)]'
-              : 'text-gray-500 shadow-[2px_2px_5px_rgba(0,0,0,0.05),-2px_-2px_5px_rgba(255,255,255,0.8)]'}`}
-            onClick={() => setActiveTab('notes')}
-          >
-            Scratchpad
-          </button>
-        </div>
+        <MobileTabSwitcher
+          activeTab={activeTab}
+          onShowRecording={showRecordingTab}
+          onShowNotes={showNotesTab}
+        />
 
         <div className="flex-1 relative min-h-0 flex flex-col">
           <div className="flex-1 relative">
@@ -165,59 +309,22 @@ export const RecordingArea = memo(({
 
           <div className="p-4 bg-white border-t space-y-4 shrink-0">
             <div className="flex justify-center items-center gap-4">
-              <button
-                onClick={handleToggleRecording}
-                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${isRecordingInProgress
-                  ? "bg-red-500 hover:bg-red-600 animate-pulse scale-110"
-                  : "bg-blue-600 hover:bg-blue-700 hover:scale-105"
-                  }`}
-              >
-                {isRecordingInProgress ? (
-                  <div className="w-6 h-6 bg-white rounded-sm" />
-                ) : (
-                  <div className="w-6 h-6 bg-white rounded-full" />
-                )}
-              </button>
+              <RecordButton isRecordingInProgress={isRecordingInProgress} onToggle={handleToggleRecording} />
 
-              {audioUrl && !isRecordingInProgress && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                  <button
-                    onClick={togglePlayback}
-                    className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-5 h-5 text-gray-700 fill-current" />
-                    ) : (
-                      <Play className="w-5 h-5 text-gray-700 fill-current" />
-                    )}
-                  </button>
-                  <audio ref={audioRef} src={audioUrl} className="hidden" />
-
-                  <button
-                    onClick={() => {
-                      if (audioRef.current) {
-                        audioRef.current.pause();
-                        audioRef.current.currentTime = 0;
-                      }
-                      setIsPlaying(false);
-                      recorderControls.clearCanvas();
-                      setQuestionRecording(partId, currentQuestionIndex, null);
-                    }}
-                    className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors group"
-                    title="Delete recording"
-                  >
-                    <Trash2 className="w-5 h-5 text-gray-500 group-hover:text-red-600" />
-                  </button>
-                </div>
-              )}
+              <PlaybackControls
+                audioUrl={audioUrl}
+                isRecordingInProgress={isRecordingInProgress}
+                isPlaying={isPlaying}
+                audioRef={audioRef}
+                onTogglePlayback={togglePlayback}
+                onDeleteRecording={handleDeleteRecording}
+              />
             </div>
 
-            <div className="flex items-center justify-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isRecordingInProgress ? 'bg-red-500 animate-ping' : 'bg-gray-300'}`} />
-              <span className="text-sm font-medium text-gray-500">
-                {isRecordingInProgress ? "Recording Answer..." : audioUrl ? "Recording Saved" : "Ready to Record"}
-              </span>
-            </div>
+            <RecordingStatus
+              isRecordingInProgress={isRecordingInProgress}
+              hasAudio={Boolean(audioUrl)}
+            />
           </div>
         </div>
       </CardContent>

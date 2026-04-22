@@ -5,7 +5,6 @@ import { AlertCircle, ArrowLeft, ArrowRight, Download, RefreshCcw } from "lucide
 import { QuestionsList } from "@/components/test/QuestionsList";
 import { RecordingArea } from "@/components/test/RecordingArea";
 import { NotesPanel } from "@/components/test/NotesPanel";
-import { AssessmentLoading } from "@/components/test/AssessmentLoading";
 import { useTestLogic } from "@/hooks/useTestLogic";
 
 export default function IndividualTestPage() {
@@ -18,7 +17,6 @@ export default function IndividualTestPage() {
     questionsLoading,
     questionsError,
     isSubmittingTest,
-    assessmentStatus,
     changeQuestion,
     goToNextQuestion,
     goToPreviousQuestion,
@@ -66,10 +64,6 @@ export default function IndividualTestPage() {
         </div>
       </div>
     );
-  }
-
-  if (assessmentStatus === "pending") {
-    return <AssessmentLoading />;
   }
 
   return (
